@@ -1,0 +1,23 @@
+{
+    "name": "SUNOMSI",
+    "short_name": "SUNOMSI",
+    "description": "Premium Service Booking App",
+    "theme_color": "#F9FAFB",
+    "background_color": "#F9FAFB",
+    "display": "standalone",
+    "orientation": "portrait",
+    "start_url": "/",
+    "scope": "/",
+    "icons": [
+        {
+            "src": "/logo.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/logo.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
