@@ -79,7 +79,7 @@ export default function Profile() {
     if (!user) return null
 
     return (
-        <div className="pb-24 space-y-6">
+        <div className="space-y-6">
             <div className="flex items-center gap-4 px-2">
                 <Avatar src={avatarUrl} alt={displayName} size="xl" />
                 <div>
