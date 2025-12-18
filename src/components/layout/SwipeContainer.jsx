@@ -201,7 +201,7 @@ export default function SwipeContainer({ children }) {
                     height: 100%;
                     overflow-y: auto;
                     overflow-x: hidden;
-                    padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+                    padding-bottom: calc(6rem + env(safe-area-inset-bottom));
                 }
 
                 .swiper-slide::-webkit-scrollbar {
