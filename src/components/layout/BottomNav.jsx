@@ -15,7 +15,7 @@ export default function BottomNav() {
 
     return (
         <nav className="fixed bottom-0 left-0 right-0 z-50 px-4" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-            <div className="max-w-md mx-auto bg-surface/80 backdrop-blur-md rounded-3xl shadow-lg border border-gray-100/50" style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }}>
+            <div className="max-w-md mx-auto bg-surface/80 backdrop-blur-md rounded-3xl shadow-lg border border-gray-100/50" style={{ paddingBottom: '0.5rem' }}>
                 <div className="flex justify-between items-center h-16 px-6 pb-2">
                     {navItems.map((item) => {
                         const isActive = location.pathname === item.path ||

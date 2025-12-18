@@ -21,20 +21,13 @@
     touch-action: manipulation;
     overscroll-behavior-y: none;
 
-    /* Fixed height approach - most reliable for iOS */
+    /* iOS-friendly viewport approach */
     width: 100%;
-    height: 100vh;
-    /* Fallback */
-    height: 100dvh;
-    /* Dynamic viewport height */
-    /* Small viewport height - excludes browser UI */
+    height: 100vh; /* Fallback for older browsers */
+    height: 100dvh; /* Dynamic viewport height - excludes browser UI on iOS */
     margin: 0;
     padding: 0;
     overflow: hidden;
-    position: fixed;
-    inset: 0;
-    padding-top: env(safe-area-inset-top);
-    /* Push root content down if needed, but usually handled by children */
   }
 }
 
