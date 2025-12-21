@@ -32,16 +32,16 @@ export default function BottomNav() {
             <div className="w-full max-w-md mx-auto relative pointer-events-auto">
                 <div className="flex items-center justify-between px-0 pb-[env(safe-area-inset-bottom)] pt-1">
 
-                    {/* Active Tab Indicator - Top Line or Background? 
-                        User asked for "no curve on edge". 
+                    {/* Active Tab Indicator - Top Line or Background?
+                        User asked for "no curve on edge".
                         Let's keep the soft pill but perhaps less rounded or just a flat block?
                         Standard fixed bars usually just color the icon or use a top border.
-                        Let's stick to the subtle background pill for now, but square it up a bit if strictly requested, 
-                        or keep "rounded-xl" internal pill as it's inside the bar. 
+                        Let's stick to the subtle background pill for now, but square it up a bit if strictly requested,
+                        or keep "rounded-xl" internal pill as it's inside the bar.
                         User said "remove curve on edge on vertical too", referring to the main container.
                     */}
 
-                    {/* Active Tab Background Pill - Keeping slightly rounded for internal visual hierarchy, 
+                    {/* Active Tab Background Pill - Keeping slightly rounded for internal visual hierarchy,
                         but effectively making the bar itself square. */}
                     {activeIndex !== -1 && (
                         <motion.div
@@ -68,7 +68,7 @@ export default function BottomNav() {
                             <Link
                                 key={item.name}
                                 to={item.path}
-                                className="relative flex-1 flex flex-col items-center justify-center py-3 touch-manipulation active:scale-95 transition-transform duration-100"
+                                className="relative flex-1 flex flex-col items-center justify-center py-2 touch-manipulation active:scale-95 transition-transform duration-100"
                             >
                                 {/* Icon Container */}
                                 <div className="relative z-10">
@@ -76,8 +76,8 @@ export default function BottomNav() {
                                         size={24}
                                         strokeWidth={isActive ? 2.5 : 2}
                                         className={`transition-all duration-300 ${isActive
-                                                ? 'text-black'
-                                                : 'text-gray-400 group-hover:text-gray-600'
+                                            ? 'text-black'
+                                            : 'text-gray-400 group-hover:text-gray-600'
                                             }`}
                                     />
                                 </div>
