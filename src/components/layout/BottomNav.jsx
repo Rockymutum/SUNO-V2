@@ -28,21 +28,21 @@ export default function BottomNav() {
 
     return (
         <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-            <div className="max-w-md mx-auto px-6 pb-2">
+            <div className="max-w-md mx-auto px-2 pb-1">
                 {/* Floating Tab Container */}
                 <div className="relative pointer-events-auto">
 
-                    {/* Stronger Shadow Blob for depth */}
-                    <div className="absolute inset-x-8 top-4 bottom-0 bg-black/10 blur-xl rounded-2xl" />
+                    {/* Shadow Blob */}
+                    <div className="absolute inset-x-4 top-4 bottom-0 bg-black/5 blur-xl rounded-2xl" />
 
-                    {/* Main Navigation Bar with elevated shadow */}
-                    <div className="relative bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0_20px_40px_-12px_rgba(0,0,0,0.12)] border border-white/60 px-2 py-1">
+                    {/* Main Navigation Bar */}
+                    <div className="relative bg-white/90 backdrop-blur-xl rounded-2xl shadow-[0_20px_40px_-12px_rgba(0,0,0,0.12)] border border-white/60 px-1 py-1">
 
-                        <div className="flex items-center justify-between gap-1 relative z-10">
+                        <div className="flex items-center justify-between gap-0 relative z-10">
                             {/* Active Tab Indicator - Soft Gray Pill */}
                             {activeIndex !== -1 && (
                                 <motion.div
-                                    className="absolute inset-y-1 bg-gray-100 rounded-xl"
+                                    className="absolute inset-y-1 bg-gray-100/80 rounded-xl"
                                     layoutId="activeTabMinimal"
                                     initial={false}
                                     animate={{
@@ -65,22 +65,22 @@ export default function BottomNav() {
                                     <Link
                                         key={item.name}
                                         to={item.path}
-                                        className="relative flex-1 flex flex-col items-center justify-center py-1.5 transition-all duration-300 group touch-manipulation"
+                                        className="relative flex-1 flex flex-col items-center justify-center py-2 transition-all duration-300 group touch-manipulation"
                                     >
                                         {/* Icon Container */}
                                         <div className="relative z-10">
                                             <Icon
-                                                size={20}
+                                                size={22}
                                                 strokeWidth={isActive ? 2.5 : 2}
                                                 className={`transition-all duration-300 ${isActive
-                                                    ? 'text-black transform scale-110'
-                                                    : 'text-gray-400 group-hover:text-gray-600'
+                                                        ? 'text-black transform scale-105'
+                                                        : 'text-gray-400 group-hover:text-gray-600'
                                                     }`}
                                             />
                                         </div>
 
-                                        {/* Label - visible on all, but bold on active */}
-                                        <span className={`text-[10px] font-medium mt-0.5 transition-colors duration-300 ${isActive ? 'text-black font-bold' : 'text-gray-500'
+                                        {/* Label */}
+                                        <span className={`text-[9px] font-medium mt-0.5 transition-colors duration-300 ${isActive ? 'text-black font-bold' : 'text-gray-500'
                                             }`}>
                                             {item.name}
                                         </span>
