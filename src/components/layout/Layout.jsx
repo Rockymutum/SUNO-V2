@@ -1,6 +1,7 @@
 import { Outlet, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import TopBar from './TopBar'
+import BottomNav from './BottomNav'
 import { AnimatePresence, motion } from 'framer-motion'
 
 export default function Layout() {
@@ -40,13 +41,15 @@ export default function Layout() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -8 }}
                         transition={{ duration: 0.2, ease: "easeOut" }}
-                        className={`h-full overflow-y-auto overflow-x-hidden bg-background no-scrollbar ${isFullScreen ? '' : 'px-5 pt-16 pb-6'
+                        className={`h-full overflow-y-auto overflow-x-hidden bg-background no-scrollbar ${isFullScreen ? '' : 'px-5 pt-16 pb-24'
                             }`}
                     >
                         <Outlet context={{ isSearchOpen, setIsSearchOpen }} />
                     </motion.div>
                 </AnimatePresence>
             </main>
+
+            {showNav && <BottomNav />}
         </div>
     )
 }
