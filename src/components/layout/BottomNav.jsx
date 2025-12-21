@@ -27,68 +27,69 @@ export default function BottomNav() {
     // Or we just don't highlight any tab.
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-            <div className="max-w-md mx-auto px-2 pb-1">
-                {/* Floating Tab Container */}
-                <div className="relative pointer-events-auto">
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-gray-200">
+            {/* Safe Area Spacer for background color extension */}
+            <div className="w-full max-w-md mx-auto relative pointer-events-auto">
+                <div className="flex items-center justify-between px-0 pb-[env(safe-area-inset-bottom)] pt-1">
 
-                    {/* Shadow Blob */}
-                    <div className="absolute inset-x-4 top-4 bottom-0 bg-black/5 blur-xl rounded-2xl" />
+                    {/* Active Tab Indicator - Top Line or Background? 
+                        User asked for "no curve on edge". 
+                        Let's keep the soft pill but perhaps less rounded or just a flat block?
+                        Standard fixed bars usually just color the icon or use a top border.
+                        Let's stick to the subtle background pill for now, but square it up a bit if strictly requested, 
+                        or keep "rounded-xl" internal pill as it's inside the bar. 
+                        User said "remove curve on edge on vertical too", referring to the main container.
+                    */}
 
-                    {/* Main Navigation Bar */}
-                    <div className="relative bg-white/90 backdrop-blur-xl rounded-2xl shadow-[0_20px_40px_-12px_rgba(0,0,0,0.12)] border border-white/60 px-1 py-1">
+                    {/* Active Tab Background Pill - Keeping slightly rounded for internal visual hierarchy, 
+                        but effectively making the bar itself square. */}
+                    {activeIndex !== -1 && (
+                        <motion.div
+                            className="absolute top-1 bottom-[env(safe-area-inset-bottom)] bg-gray-100/80 rounded-lg -z-10"
+                            layoutId="activeTabMinimal"
+                            initial={false}
+                            animate={{
+                                left: `${activeIndex * 25}%`,
+                                width: '25%'
+                            }}
+                            transition={{
+                                type: "spring",
+                                stiffness: 400,
+                                damping: 40
+                            }}
+                        />
+                    )}
 
-                        <div className="flex items-center justify-between gap-0 relative z-10">
-                            {/* Active Tab Indicator - Soft Gray Pill */}
-                            {activeIndex !== -1 && (
-                                <motion.div
-                                    className="absolute inset-y-1 bg-gray-100/80 rounded-xl"
-                                    layoutId="activeTabMinimal"
-                                    initial={false}
-                                    animate={{
-                                        left: `${activeIndex * 25}%`,
-                                        width: '25%'
-                                    }}
-                                    transition={{
-                                        type: "spring",
-                                        stiffness: 400,
-                                        damping: 30
-                                    }}
-                                />
-                            )}
+                    {navItems.map((item, index) => {
+                        const isActive = activeIndex === index
+                        const Icon = item.icon
 
-                            {navItems.map((item, index) => {
-                                const isActive = activeIndex === index
-                                const Icon = item.icon
+                        return (
+                            <Link
+                                key={item.name}
+                                to={item.path}
+                                className="relative flex-1 flex flex-col items-center justify-center py-3 touch-manipulation active:scale-95 transition-transform duration-100"
+                            >
+                                {/* Icon Container */}
+                                <div className="relative z-10">
+                                    <Icon
+                                        size={24}
+                                        strokeWidth={isActive ? 2.5 : 2}
+                                        className={`transition-all duration-300 ${isActive
+                                                ? 'text-black'
+                                                : 'text-gray-400 group-hover:text-gray-600'
+                                            }`}
+                                    />
+                                </div>
 
-                                return (
-                                    <Link
-                                        key={item.name}
-                                        to={item.path}
-                                        className="relative flex-1 flex flex-col items-center justify-center py-2 transition-all duration-300 group touch-manipulation"
-                                    >
-                                        {/* Icon Container */}
-                                        <div className="relative z-10">
-                                            <Icon
-                                                size={22}
-                                                strokeWidth={isActive ? 2.5 : 2}
-                                                className={`transition-all duration-300 ${isActive
-                                                        ? 'text-black transform scale-105'
-                                                        : 'text-gray-400 group-hover:text-gray-600'
-                                                    }`}
-                                            />
-                                        </div>
-
-                                        {/* Label */}
-                                        <span className={`text-[9px] font-medium mt-0.5 transition-colors duration-300 ${isActive ? 'text-black font-bold' : 'text-gray-500'
-                                            }`}>
-                                            {item.name}
-                                        </span>
-                                    </Link>
-                                )
-                            })}
-                        </div>
-                    </div>
+                                {/* Label */}
+                                <span className={`text-[10px] font-medium mt-1 transition-colors duration-300 ${isActive ? 'text-black font-bold' : 'text-gray-500'
+                                    }`}>
+                                    {item.name}
+                                </span>
+                            </Link>
+                        )
+                    })}
                 </div>
             </div>
         </div>
