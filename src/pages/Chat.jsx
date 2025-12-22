@@ -110,11 +110,29 @@ export default function Chat() {
                     setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
                 }
             )
+            // Backup Listener: Listen to Conversation Update (Last Message)
+            // This is often more reliable than 'messages' insert if RLS is complex
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'conversations',
+                    filter: `id=eq.${conversationId}`
+                },
+                () => {
+                    // When conversation updates (last_message changes), re-fetch messages to be safe
+                    queryClient.invalidateQueries(['messages', conversationId])
+                    // Also clear typing
+                    setIsTyping(false)
+                }
+            )
             .on(
                 'broadcast',
                 { event: 'typing' },
                 (payload) => {
-                    if (payload.payload.userId !== user.id) {
+                    // Verify the event is from the OTHER user
+                    if (payload.payload?.userId && payload.payload.userId !== user.id) {
                         setIsTyping(true)
                         // Clear existing timeout to reset the timer
                         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
@@ -126,13 +144,17 @@ export default function Chat() {
                     }
                 }
             )
-            .subscribe()
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log('Connected to chat channel')
+                }
+            })
 
         return () => {
             supabase.removeChannel(channel)
             if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
         }
-    }, [conversationId])
+    }, [conversationId, queryClient, user?.id])
 
     const handleInputChange = (e) => {
         setInput(e.target.value)
