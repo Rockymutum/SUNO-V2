@@ -177,9 +177,9 @@ export default function Chat() {
     if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>
 
     return (
-        <div className="flex flex-col h-screen fixed inset-0 z-50 bg-white">
+        <div className="flex flex-col h-[100dvh] fixed inset-0 z-50 bg-white">
             {/* Header */}
-            <div className="h-16 px-4 bg-white/80 backdrop-blur border-b border-slate-100 flex items-center justify-between flex-shrink-0">
+            <div className="h-16 px-4 bg-white/80 backdrop-blur border-b border-slate-100 flex items-center justify-between flex-shrink-0 pt-[env(safe-area-inset-top)]">
                 <div className="flex items-center gap-3">
                     <button onClick={() => navigate(-1)} className="p-1 -ml-1 text-gray-500">
                         <ChevronLeft size={24} />
@@ -219,7 +219,7 @@ export default function Chat() {
             </div>
 
             {/* Input */}
-            <form onSubmit={handleSend} className="p-3 bg-white border-t border-slate-100 flex items-center gap-2 pb-6 shadow-[0_-4px_10px_-1px_rgba(0,0,0,0.02)]">
+            <form onSubmit={handleSend} className="p-3 bg-white border-t border-slate-100 flex items-center gap-2 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-[0_-4px_10px_-1px_rgba(0,0,0,0.02)]">
                 <button type="button" className="p-3 text-gray-400 hover:text-primary transition-colors">
                     <Paperclip size={20} />
                 </button>

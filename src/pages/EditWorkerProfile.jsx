@@ -10,7 +10,7 @@ import { ChevronLeft, Briefcase, MapPin, DollarSign, Wrench, Loader2, Image as I
 import { motion } from 'framer-motion'
 
 export default function EditWorkerProfile() {
-    const { user, profile } = useAuth()
+    const { user, profile, refreshProfile } = useAuth()
     const navigate = useNavigate()
     const [loading, setLoading] = useState(false)
 
@@ -125,6 +125,7 @@ export default function EditWorkerProfile() {
 
             if (error) throw error
 
+            await refreshProfile() // Update global state
             navigate(-1)
         } catch (error) {
             console.error('Error updating worker profile:', error)

@@ -223,6 +223,17 @@ export function TaskCard({ task, onDelete }) {
             {photos.length > 0 && (
                 <Link to={`/task/${id}`} className="block w-full h-56 bg-gray-100 overflow-hidden relative active:opacity-90 transition-opacity">
                     <img src={photos[0]} alt={title} className="w-full h-full object-cover" />
+
+                    {/* Category Badge for Photo Card */}
+                    <div className="absolute top-3 left-3">
+                        {(() => {
+                            const cat = CATEGORIES.find(c => c.id === task.category)
+                            return cat ? (
+                                <Badge className={`${cat.color} border-0 shadow-sm bg-white/90 backdrop-blur`}>{cat.name}</Badge>
+                            ) : null
+                        })()}
+                    </div>
+
                     <div className="absolute bottom-3 right-3">
                         <Badge className="bg-white/90 backdrop-blur text-primary font-bold shadow-sm">
                             ₹{budget_min} - ₹{budget_max}
