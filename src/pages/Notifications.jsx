@@ -9,13 +9,18 @@ import { formatDistanceToNow } from 'date-fns'
 import { motion, AnimatePresence } from 'framer-motion'
 import { NotificationPermissionModal } from '@/components/NotificationPermissionModal'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
+import { usePWA } from '@/context/PWAContext'
+import { Download } from 'lucide-react'
+
 
 export default function Notifications() {
     const navigate = useNavigate()
     const { user } = useAuth()
     const queryClient = useQueryClient()
     const { isSubscribed, subscribeToPush, loading: pushLoading } = usePushNotifications()
+    const { needRefresh, updateServiceWorker } = usePWA()
     const [showPushModal, setShowPushModal] = useState(false)
+
 
     // Fetch Notifications
     const { data: notifications = [], isLoading } = useQuery({
@@ -124,7 +129,24 @@ export default function Notifications() {
 
             {/* List */}
             <div className="pt-16 px-4 space-y-2">
+                {needRefresh && (
+                    <div
+                        onClick={() => updateServiceWorker(true)}
+                        className="mb-4 bg-black text-white p-4 rounded-2xl flex items-center gap-4 cursor-pointer hover:bg-gray-900 transition-all shadow-xl shadow-black/20"
+                    >
+                        <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center animate-pulse">
+                            <Download size={20} className="text-white" />
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="font-bold text-sm">Update Available</h3>
+                            <p className="text-xs text-white/70">A new version is available. Tap to update.</p>
+                        </div>
+                        <Button size="sm" className="bg-white text-black hover:bg-gray-100 text-xs px-3 h-8">Update</Button>
+                    </div>
+                )}
+
                 {!isSubscribed && (
+
                     <div
                         onClick={() => setShowPushModal(true)}
                         className="mb-6 bg-primary/5 border border-primary/10 p-4 rounded-2xl flex items-center gap-4 cursor-pointer hover:bg-primary/10 transition-colors"

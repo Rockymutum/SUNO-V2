@@ -2,7 +2,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import Layout from './components/layout/Layout'
 import { AuthProvider } from './context/AuthContext.jsx'
+import { PWAProvider } from './context/PWAContext.jsx'
 import HomeRoute from './components/HomeRoute'
+
 
 import WorkerProfile from './pages/WorkerProfile'
 import Messages from './pages/Messages'
@@ -38,42 +40,46 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route element={<Layout />}>
-              {/* Main Tab Pages */}
-              <Route path="/" element={
-                <HomeRoute>
-                  <Discovery />
-                </HomeRoute>
-              } />
-              <Route path="/workers" element={<Workers />} />
-              <Route path="/workers/:category" element={<Workers />} />
-              <Route path="/messages" element={<Messages />} />
-              <Route path="/profile/me" element={<Profile />} />
+        <PWAProvider>
+          <AuthProvider>
 
-              {/* Non-tab pages */}
-              <Route path="/welcome" element={<Welcome />} />
-              <Route path="/notifications" element={<Notifications />} />
-              <Route path="/worker/:id" element={<WorkerProfile />} />
-              <Route path="/messages/:id" element={<Chat />} />
-              <Route path="/profile/:id" element={<Profile />} />
-              <Route path="/profile/edit" element={<EditProfile />} />
-              <Route path="/worker/edit" element={<EditWorkerProfile />} />
-              <Route path="/profile/public/:id" element={<PublicProfile />} />
-              <Route path="/privacy" element={<PrivacySecurity />} />
-              <Route path="/task/:id" element={<TaskDetails />} />
-              <Route path="/auth" element={<Auth />} />
-            </Route>
+            <Routes>
+              <Route element={<Layout />}>
+                {/* Main Tab Pages */}
+                <Route path="/" element={
+                  <HomeRoute>
+                    <Discovery />
+                  </HomeRoute>
+                } />
+                <Route path="/workers" element={<Workers />} />
+                <Route path="/workers/:category" element={<Workers />} />
+                <Route path="/messages" element={<Messages />} />
+                <Route path="/profile/me" element={<Profile />} />
 
-            {/* Modals or routes outside main layout if needed, currently inside for simpler transitions */}
-            <Route path="/task/create" element={<TaskCreate />} />
-            <Route path="/task/edit/:id" element={<EditTask />} />
+                {/* Non-tab pages */}
+                <Route path="/welcome" element={<Welcome />} />
+                <Route path="/notifications" element={<Notifications />} />
+                <Route path="/worker/:id" element={<WorkerProfile />} />
+                <Route path="/messages/:id" element={<Chat />} />
+                <Route path="/profile/:id" element={<Profile />} />
+                <Route path="/profile/edit" element={<EditProfile />} />
+                <Route path="/worker/edit" element={<EditWorkerProfile />} />
+                <Route path="/profile/public/:id" element={<PublicProfile />} />
+                <Route path="/privacy" element={<PrivacySecurity />} />
+                <Route path="/task/:id" element={<TaskDetails />} />
+                <Route path="/auth" element={<Auth />} />
+              </Route>
 
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </AuthProvider>
+              {/* Modals or routes outside main layout if needed, currently inside for simpler transitions */}
+              <Route path="/task/create" element={<TaskCreate />} />
+              <Route path="/task/edit/:id" element={<EditTask />} />
+
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </AuthProvider>
+        </PWAProvider>
       </BrowserRouter>
+
     </QueryClientProvider>
   )
 }
