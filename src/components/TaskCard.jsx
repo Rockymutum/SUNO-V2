@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { formatDistanceToNow } from 'date-fns'
 import { CommentSection } from './comments/CommentSection'
 import { Modal } from '@/components/ui/Modal'
+import { CATEGORIES } from '@/lib/constants'
 
 export function TaskCard({ task, onDelete }) {
     // Mock data fallbacks
@@ -235,7 +236,14 @@ export function TaskCard({ task, onDelete }) {
             <div className="p-4 pt-3">
                 {photos.length === 0 && (
                     <div className="flex items-center justify-between mb-2">
-                        <Badge variant="outline" className="border-slate-200">Plumbing</Badge>
+                        {(() => {
+                            const cat = CATEGORIES.find(c => c.id === task.category)
+                            return cat ? (
+                                <Badge className={`${cat.color} border-0`}>{cat.name}</Badge>
+                            ) : (
+                                <Badge variant="outline" className="border-slate-200">General</Badge>
+                            )
+                        })()}
                         <span className="font-bold text-sm">₹{budget_min} - ₹{budget_max}</span>
                     </div>
                 )}

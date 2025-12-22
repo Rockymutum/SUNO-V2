@@ -11,6 +11,7 @@ import OfferModal from '@/components/OfferModal'
 import ReviewModal from '@/components/ReviewModal'
 import { motion } from 'framer-motion'
 import { Modal } from '@/components/ui/Modal'
+import { CATEGORIES } from '@/lib/constants'
 
 export default function TaskDetails() {
     const { id } = useParams()
@@ -195,6 +196,8 @@ export default function TaskDetails() {
     const photo = task.photos?.[0]
     const isOwner = user?.id === task.created_by
 
+    const category = CATEGORIES.find(c => c.id === task.category)
+
     return (
         <div className="bg-white min-h-screen pb-[calc(6rem+env(safe-area-inset-bottom))] relative">
 
@@ -228,8 +231,16 @@ export default function TaskDetails() {
                     {/* Title & Budget */}
                     <div>
                         <div className="flex justify-between items-start mb-2">
-                            <div className="flex gap-2">
-                                <Badge variant="primary" className="mb-2">General</Badge>
+                            <div className="flex flex-wrap gap-2">
+                                {/* Category Badge */}
+                                {category ? (
+                                    <Badge className={`${category.color} border-0 mb-2`}>
+                                        {category.name}
+                                    </Badge>
+                                ) : (
+                                    <Badge variant="secondary" className="mb-2">General</Badge>
+                                )}
+
                                 {task.status === 'in_progress' && <Badge className="bg-blue-100 text-blue-700 mb-2">In Progress</Badge>}
                                 {task.status === 'completed' && <Badge className="bg-green-100 text-green-700 mb-2">Completed</Badge>}
                             </div>

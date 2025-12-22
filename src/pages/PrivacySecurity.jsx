@@ -1,20 +1,28 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, Shield, Key, Eye, Trash2, Smartphone, AlertTriangle } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { useQueryClient } from '@tanstack/react-query'
+import { ChevronLeft, Shield, Key, Eye, Trash2, Smartphone, AlertTriangle, X } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { Input } from '@/components/ui/Input'
 import { useAuth } from '@/context/AuthContext'
 import { supabase } from '@/lib/supabase'
 
 export default function PrivacySecurity() {
     const navigate = useNavigate()
-    const { user, profile, signOut } = useAuth()
+    const queryClient = useQueryClient()
+    const { user, profile, signOut, refreshProfile } = useAuth()
     const [loading, setLoading] = useState(false)
 
     // State for toggles
     const [hidePhone, setHidePhone] = useState(false)
     const [vacationMode, setVacationMode] = useState(false)
+
+    // State for Change Password
+    const [showPasswordModal, setShowPasswordModal] = useState(false)
+    const [newPassword, setNewPassword] = useState('')
+    const [passwordLoading, setPasswordLoading] = useState(false)
 
     useEffect(() => {
         if (profile) {
@@ -36,11 +44,41 @@ export default function PrivacySecurity() {
                 .eq('id', user.id)
 
             if (error) throw error
+
+            // Refresh global profile state so navigation doesn't reset it
+            await refreshProfile()
+
+            // Invalidate workers cache if vacation mode changed
+            if (field === 'vacation_mode') {
+                queryClient.invalidateQueries({ queryKey: ['workers'] })
+            }
         } catch (error) {
             console.error(`Error updating ${field}:`, error)
             // Revert on error
             if (field === 'hide_phone') setHidePhone(currentValue)
             if (field === 'vacation_mode') setVacationMode(currentValue)
+        }
+    }
+
+    const handleChangePassword = async (e) => {
+        e.preventDefault()
+        if (newPassword.length < 6) {
+            alert("Password must be at least 6 characters long")
+            return
+        }
+
+        setPasswordLoading(true)
+        try {
+            const { error } = await supabase.auth.updateUser({ password: newPassword })
+            if (error) throw error
+            alert("Password updated successfully")
+            setShowPasswordModal(false)
+            setNewPassword('')
+        } catch (error) {
+            console.error("Error updating password:", error)
+            alert("Failed to update password. Please try again.")
+        } finally {
+            setPasswordLoading(false)
         }
     }
 
@@ -55,17 +93,8 @@ export default function PrivacySecurity() {
             if (doubleConfirmed === 'DELETE') {
                 setLoading(true)
                 try {
-                    // Logic to delete everything. 
-                    // Ideally, Supabase 'on delete cascade' handles related data (tasks, messages, etc.) if configured.
-                    // If strict RLS prevents user from deleting mostly everything, we might need a stored procedure.
-                    // But usually, users can only delete themselves from auth.users (requires service role) or simple public.users deletion?
-                    // NOTE: Deleting from public.users usually triggers cascade if FK is set.
-                    // But deleting from auth.users requires Admin API.
-
-                    // Client-side user deletion is often restricted.
-                    // We'll try to delete from public.users first.
-
                     // 1. Delete user data from public table
+                    // RLS policies must allow users to delete their own rows
                     const { error: dbError } = await supabase
                         .from('users')
                         .delete()
@@ -73,14 +102,14 @@ export default function PrivacySecurity() {
 
                     if (dbError) throw dbError
 
-                    // 2. Sign out
+                    // 2. Sign out (this will clear session)
                     await signOut()
 
-                    alert("Your account has been deleted.")
+                    alert("Your account has been marked for deletion and you have been signed out.")
                     navigate('/welcome')
                 } catch (error) {
                     console.error("Error deleting account:", error)
-                    alert("Failed to delete account completely. Please contact support if issues persist.")
+                    alert("Failed to delete account data. Please contact support.")
                     setLoading(false)
                 }
             }
@@ -88,9 +117,9 @@ export default function PrivacySecurity() {
     }
 
     return (
-        <div className="bg-white min-h-screen pb-safe">
+        <div className="bg-white min-h-screen pb-safe relative">
             {/* Header */}
-            <div className="fixed top-0 left-0 right-0 h-16 bg-white z-50 px-4 flex items-center gap-4 border-b border-gray-100">
+            <div className="fixed top-0 left-0 right-0 h-16 bg-white z-40 px-4 flex items-center gap-4 border-b border-gray-100">
                 <button
                     onClick={() => navigate(-1)}
                     className="p-2 -ml-2 text-gray-500 hover:bg-slate-50 rounded-full"
@@ -165,7 +194,10 @@ export default function PrivacySecurity() {
                 <section className="space-y-3">
                     <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider ml-1">Security</h2>
                     <Card className="divide-y divide-gray-50 border-0 shadow-sm overflow-hidden">
-                        <button className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors text-left">
+                        <button
+                            onClick={() => setShowPasswordModal(true)}
+                            className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors text-left"
+                        >
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-slate-100 rounded-lg text-gray-600">
                                     <Key size={18} />
@@ -213,6 +245,66 @@ export default function PrivacySecurity() {
                     Version 1.0.0
                 </p>
             </motion.div>
+
+            {/* Password Change Modal */}
+            <AnimatePresence>
+                {showPasswordModal && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 z-50 backdrop-blur-sm"
+                            onClick={() => setShowPasswordModal(false)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="fixed left-4 right-4 top-1/2 -translate-y-1/2 bg-white rounded-2xl p-6 z-50 max-w-sm mx-auto shadow-xl"
+                        >
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="font-bold text-lg">Change Password</h3>
+                                <button onClick={() => setShowPasswordModal(false)} className="p-1 hover:bg-gray-100 rounded-full">
+                                    <X size={20} className="text-gray-500" />
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleChangePassword} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                                    <Input
+                                        type="password"
+                                        placeholder="Enter new password"
+                                        value={newPassword}
+                                        onChange={(e) => setNewPassword(e.target.value)}
+                                        required
+                                        minLength={6}
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">Must be at least 6 characters long</p>
+                                </div>
+                                <div className="flex gap-3 pt-2">
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        className="flex-1"
+                                        onClick={() => setShowPasswordModal(false)}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        className="flex-1"
+                                        disabled={passwordLoading || !newPassword}
+                                    >
+                                        {passwordLoading ? 'Updating...' : 'Update'}
+                                    </Button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
         </div>
     )
 }

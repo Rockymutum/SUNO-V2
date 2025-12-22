@@ -17,7 +17,7 @@ export default function PublicProfile() {
                 // Fetch user profile
                 const { data: userData, error: userError } = await supabase
                     .from('users')
-                    .select('display_name, avatar_url, bio, created_at, location, phone')
+                    .select('display_name, avatar_url, bio, created_at, location, phone, hide_phone')
                     .eq('id', id)
                     .single()
 
@@ -101,7 +101,7 @@ export default function PublicProfile() {
                         </p>
                     </div>
 
-                    {profile.phone && (
+                    {profile.phone && !profile.hide_phone && (
                         <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
                             <h3 className="font-bold text-sm uppercase tracking-wider text-gray-900 mb-3 flex items-center gap-2">
                                 <Phone size={16} className="text-primary" /> Contact

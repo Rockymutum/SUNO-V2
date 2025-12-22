@@ -23,7 +23,7 @@ export default function Workers() {
                     worker_profile:worker_profiles(average_rating, reviews_count)
                 `)
                 .eq('is_worker', true)
-                .neq('vacation_mode', true) // Filter out vacation mode (assume null/false is active)
+                .or('vacation_mode.is.null,vacation_mode.eq.false') // Filter out vacation mode (assume null/false is active)
 
             if (category && category !== 'all') {
                 query = query.eq('category', category)
