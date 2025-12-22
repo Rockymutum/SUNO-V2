@@ -67,6 +67,10 @@ export default function Chat() {
         if (chatUser) setOtherUser(chatUser)
     }, [chatUser])
 
+    const [isTyping, setIsTyping] = useState(false)
+    const typingTimeoutRef = useRef(null)
+    const lastTypedRef = useRef(0)
+
     // Subscription
     useEffect(() => {
         const channel = supabase
@@ -101,16 +105,49 @@ export default function Chat() {
                     })
                     // Mark as read immediately if user is in chat
                     markAsRead(conversationId, user.id)
+                    // Clear typing indicator instantly if message arrives
+                    setIsTyping(false)
                     setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
                 }
+            )
+            .on(
+                'broadcast',
+                { event: 'typing' },
+                (payload) => {
+                    if (payload.payload.userId !== user.id) {
+                        setIsTyping(true)
+                        // Clear existing timeout to reset the timer
+                        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+                        // Hide after 3 seconds of silence
+                        typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 3000)
 
+                        // Auto scroll if near bottom so we see the indicator
+                        setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
+                    }
+                }
             )
             .subscribe()
 
         return () => {
             supabase.removeChannel(channel)
+            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
         }
     }, [conversationId])
+
+    const handleInputChange = (e) => {
+        setInput(e.target.value)
+
+        // Broadcast typing event (throttled to every 2 seconds)
+        const now = Date.now()
+        if (now - lastTypedRef.current > 2000) {
+            supabase.channel(`chat:${conversationId}`).send({
+                type: 'broadcast',
+                event: 'typing',
+                payload: { userId: user.id }
+            })
+            lastTypedRef.current = now
+        }
+    }
 
     // Mark as read on mount
     useEffect(() => {
@@ -126,7 +163,7 @@ export default function Chat() {
     // Auto-scroll on messages change
     useEffect(() => {
         scrollRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }, [messages, loading])
+    }, [messages, loading, isTyping])
 
     const handleSend = async (e) => {
         e.preventDefault()
@@ -134,6 +171,9 @@ export default function Chat() {
 
         const text = input.trim()
         setInput('') // Optimistic clear
+
+        // Stop typing indicator on my side explicitly (though handled by logic)
+        lastTypedRef.current = 0
 
         // Optimistic Update
         const tempId = 'optimistic-' + Date.now()
@@ -200,7 +240,7 @@ export default function Chat() {
                     <div>
                         <h3 className="font-bold text-sm">{otherUser?.display_name || 'User'}</h3>
                         <p className={`text-[10px] font-medium ${isOnline ? 'text-green-500' : 'text-gray-400'}`}>
-                            {lastSeenText}
+                            {isTyping ? <span className="text-primary animate-pulse font-bold">Typing...</span> : lastSeenText}
                         </p>
                     </div>
                 </div>
@@ -227,6 +267,22 @@ export default function Chat() {
                         </motion.div>
                     )
                 })}
+
+                {/* Typing Bubble */}
+                {isTyping && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex justify-start"
+                    >
+                        <div className="bg-white border border-slate-100 shadow-sm rounded-2xl rounded-tl-none p-3 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                            <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                            <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></span>
+                        </div>
+                    </motion.div>
+                )}
+
                 <div ref={scrollRef} />
             </div>
 
@@ -240,7 +296,7 @@ export default function Chat() {
                         className="flex-1 bg-transparent p-3 text-sm focus:outline-none"
                         placeholder="Type a message..."
                         value={input}
-                        onChange={e => setInput(e.target.value)}
+                        onChange={handleInputChange}
                     />
                 </div>
                 <Button size="icon" className="rounded-full w-11 h-11 !bg-black !text-white hover:!bg-gray-800 border-none" disabled={!input.trim()}>
