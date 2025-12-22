@@ -66,7 +66,8 @@ export function useChat() {
 
     const sendMessage = useCallback(async (conversationId, senderId, text) => {
         try {
-            const { data, error } = await supabase
+            // 1. Insert the message
+            const { data: messageData, error: messageError } = await supabase
                 .from('messages')
                 .insert({
                     conversation_id: conversationId,
@@ -77,20 +78,63 @@ export function useChat() {
                 .select()
                 .single()
 
-            if (error) throw error
+            if (messageError) throw messageError
 
-            // Update conversation last_message
+            // 2. Fetch current conversation to get unread counts
+            // We need to do this to atomically-ish update the JSONB
+            const { data: convData, error: convError } = await supabase
+                .from('conversations')
+                .select('unread_count_per_user, participant_ids')
+                .eq('id', conversationId)
+                .single()
+
+            if (convError) console.error('Error fetching conv for update:', convError)
+
+            const participants = convData?.participant_ids || []
+            const otherUserId = participants.find(id => id !== senderId)
+
+            // Calculate new counts
+            const currentCounts = convData?.unread_count_per_user || {}
+            const newCounts = { ...currentCounts }
+            if (otherUserId) {
+                newCounts[otherUserId] = (newCounts[otherUserId] || 0) + 1
+            }
+
+            // 3. Update conversation last_message AND unread counts
             await supabase
                 .from('conversations')
                 .update({
                     last_message: text,
-                    last_message_at: new Date()
+                    last_message_at: new Date(),
+                    unread_count_per_user: newCounts
                 })
                 .eq('id', conversationId)
 
+            // 4. Create Notification for the recipient
+            if (otherUserId) {
+                // Fetch sender name (optimization: could be passed in, but safe to fetch here)
+                const { data: senderProfile } = await supabase
+                    .from('users')
+                    .select('display_name')
+                    .eq('id', senderId)
+                    .single()
+
+                const senderName = senderProfile?.display_name || 'User'
+
+                await supabase
+                    .from('notifications')
+                    .insert({
+                        user_id: otherUserId,
+                        title: `New message from ${senderName}`,
+                        body: text, // Truncate if too long? UI handles it.
+                        data: { url: `/messages/${conversationId}` },
+                        is_read: false
+                    })
+            }
+
             await queryClient.invalidateQueries({ queryKey: ['conversations'] })
 
-            return data
+            return messageData
 
         } catch (err) {
             console.error('Error sending message:', err)
@@ -132,7 +176,7 @@ export function useChat() {
                 .insert({
                     participant_ids: [currentUserId, otherUserId],
                     last_message: 'Started a new conversation',
-                    unread_count_per_user: { [currentUserId]: 0, [otherUserId]: 1 }
+                    unread_count_per_user: { [currentUserId]: 0, [otherUserId]: 0 }
                 })
                 .select()
                 .single()
@@ -146,12 +190,51 @@ export function useChat() {
         }
     }, [])
 
+    const markAsRead = useCallback(async (conversationId, userId) => {
+        try {
+            // 1. Fetch current counts to update safely
+            const { data: convData } = await supabase
+                .from('conversations')
+                .select('unread_count_per_user')
+                .eq('id', conversationId)
+                .single()
+
+            if (convData) {
+                const currentCounts = convData.unread_count_per_user || {}
+                // Only update if count > 0
+                if (currentCounts[userId] > 0) {
+                    const newCounts = { ...currentCounts, [userId]: 0 }
+                    await supabase
+                        .from('conversations')
+                        .update({ unread_count_per_user: newCounts })
+                        .eq('id', conversationId)
+                }
+            }
+
+            // 2. Mark messages as read (optional but good for consistency)
+            // We don't really use this for the badge but good for history
+            /* 
+            await supabase
+                .from('messages')
+                .update({ read: true })
+                .eq('conversation_id', conversationId)
+                .neq('sender_id', userId)
+                .is('read', false) 
+            */
+
+            await queryClient.invalidateQueries({ queryKey: ['conversations'] })
+        } catch (err) {
+            console.error('Error marking as read:', err)
+        }
+    }, [queryClient])
+
     return {
         loading,
         error,
         fetchConversations,
         fetchMessages,
         sendMessage,
-        getOrCreateConversation
+        getOrCreateConversation,
+        markAsRead
     }
 }

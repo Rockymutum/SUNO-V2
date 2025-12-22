@@ -31,6 +31,33 @@ export default function Notifications() {
         enabled: !!user
     })
 
+    // Real-time subscription for new notifications
+    useEffect(() => {
+        if (!user) return
+
+        const channel = supabase
+            .channel(`notifications:${user.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'notifications',
+                    filter: `user_id=eq.${user.id}`
+                },
+                (payload) => {
+                    // Refresh list when new notification arrives
+                    queryClient.invalidateQueries(['notifications', user.id])
+                    // Optional: Play sound or show toast here
+                }
+            )
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
+    }, [user, queryClient])
+
     // Mark all as read on mount
     useEffect(() => {
         if (notifications.some(n => !n.is_read)) {

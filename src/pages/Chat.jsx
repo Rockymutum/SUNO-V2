@@ -15,7 +15,8 @@ export default function Chat() {
     const { id: conversationId } = useParams()
     const navigate = useNavigate()
     const { user } = useAuth()
-    const { fetchMessages, sendMessage } = useChat()
+    const { fetchMessages, sendMessage, markAsRead } = useChat()
+
     const queryClient = useQueryClient()
 
     // Activate presence for myself
@@ -98,8 +99,11 @@ export default function Chat() {
                         }
                         return [...prev, newMsg]
                     })
+                    // Mark as read immediately if user is in chat
+                    markAsRead(conversationId, user.id)
                     setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
                 }
+
             )
             .subscribe()
 
@@ -107,6 +111,14 @@ export default function Chat() {
             supabase.removeChannel(channel)
         }
     }, [conversationId])
+
+    // Mark as read on mount
+    useEffect(() => {
+        if (conversationId && user) {
+            markAsRead(conversationId, user.id)
+        }
+    }, [conversationId, user])
+
 
     // Loading derivation
     const loading = (messagesLoading || userLoading) && messages.length === 0
@@ -219,7 +231,7 @@ export default function Chat() {
             </div>
 
             {/* Input */}
-            <form onSubmit={handleSend} className="p-3 bg-white border-t border-slate-100 flex items-center gap-2 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-[0_-4px_10px_-1px_rgba(0,0,0,0.02)]">
+            <form onSubmit={handleSend} className="p-3 bg-white border-t border-slate-100 flex items-center gap-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-4px_10px_-1px_rgba(0,0,0,0.02)]">
                 <button type="button" className="p-3 text-gray-400 hover:text-primary transition-colors">
                     <Paperclip size={20} />
                 </button>

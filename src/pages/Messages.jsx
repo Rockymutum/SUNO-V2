@@ -39,8 +39,8 @@ export default function Messages() {
         <div className="pb-20 pt-2 space-y-1">
             {conversations.map(conv => {
                 const otherUser = conv.other_user
-                // Determine unread count logic if feasible, currently simplified
-                const isUnread = false // Logic needed based on read_status table or array
+                const unreadCount = conv.unread_count_per_user?.[user.id] || 0
+                const isUnread = unreadCount > 0
 
                 return (
                     <Link

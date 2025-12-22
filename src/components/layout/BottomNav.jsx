@@ -1,9 +1,13 @@
 import { Link, useLocation } from 'react-router-dom'
 import { Home, Users, MessageSquare, User } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useUnreadMessages } from '@/hooks/useUnreadMessages'
+
 
 export default function BottomNav() {
     const location = useLocation()
+    const unreadCount = useUnreadMessages()
+
 
     // Define the main navigation items
     const navItems = [
@@ -81,6 +85,12 @@ export default function BottomNav() {
                                             }`}
                                     />
                                 </div>
+                                {item.name === 'Messages' && unreadCount > 0 && (
+                                    <span className="absolute top-1 right-1/2 -mr-4 min-w-[16px] h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full px-1 border border-white">
+                                        {unreadCount > 99 ? '99+' : unreadCount}
+                                    </span>
+                                )}
+
 
                                 {/* Label */}
                                 <span className={`text-[10px] font-medium mt-1 transition-colors duration-300 ${isActive ? 'text-black font-bold' : 'text-gray-500'
