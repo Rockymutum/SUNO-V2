@@ -81,6 +81,33 @@ export function TaskCard({ task, onDelete }) {
                     .from('task_likes')
                     .insert({ task_id: id, user_id: user.id })
                 if (error) throw error
+
+                // Notify Task Owner
+                if (task.created_by !== user.id) {
+                    const { error: notifError } = await supabase
+                        .from('notifications')
+                        .insert({
+                            user_id: task.created_by,
+                            title: 'New Like ❤️',
+                            body: `Someone liked your task "${title}"`,
+                            data: { url: `/task/${id}` },
+                            is_read: false
+                        })
+
+                    if (!notifError) {
+                        supabase.functions.invoke('push-notification', {
+                            body: {
+                                type: 'INSERT',
+                                record: {
+                                    user_id: task.created_by,
+                                    title: 'New Like ❤️',
+                                    body: `Someone liked your task "${title}"`,
+                                    data: { url: `/task/${id}` }
+                                }
+                            }
+                        }).catch(console.error)
+                    }
+                }
             } else {
                 const { error } = await supabase
                     .from('task_likes')
@@ -298,7 +325,7 @@ export function TaskCard({ task, onDelete }) {
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
                     >
-                        <CommentSection taskId={id} onClose={() => setShowComments(false)} />
+                        <CommentSection taskId={id} taskOwnerId={task?.created_by} onClose={() => setShowComments(false)} />
                     </motion.div>
                 )}
             </AnimatePresence>

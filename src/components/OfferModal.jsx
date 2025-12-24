@@ -32,6 +32,31 @@ export default function OfferModal({ task, isOpen, onClose, onOfferSubmitted }) 
 
             if (error) throw error
 
+            // Create Notification for Task Owner
+            const { error: notifError } = await supabase
+                .from('notifications')
+                .insert({
+                    user_id: task.created_by,
+                    title: 'New Offer Received',
+                    body: `Someone made an offer of ₹${formData.price} on "${task.title}"`,
+                    data: { url: `/task/${task.id}` },
+                    is_read: false
+                })
+
+            if (!notifError) {
+                supabase.functions.invoke('push-notification', {
+                    body: {
+                        type: 'INSERT',
+                        record: {
+                            user_id: task.created_by,
+                            title: 'New Offer Received',
+                            body: `Someone made an offer of ₹${formData.price} on "${task.title}"`,
+                            data: { url: `/task/${task.id}` }
+                        }
+                    }
+                }).catch(console.error)
+            }
+
             onOfferSubmitted()
             onClose()
             setFormData({ price: '', message: '' })

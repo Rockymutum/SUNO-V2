@@ -83,6 +83,34 @@ export default function TaskDetails() {
 
             if (taskError) throw taskError
 
+            // Notify Worker
+            const selectedApp = applications.find(a => a.id === selectedApplicationId)
+            if (selectedApp) {
+                const { error: notifError } = await supabase
+                    .from('notifications')
+                    .insert({
+                        user_id: selectedApp.worker_id,
+                        title: 'Offer Accepted! 🎉',
+                        body: `Your offer for "${task.title}" has been accepted.`,
+                        data: { url: `/task/${task.id}` },
+                        is_read: false
+                    })
+
+                if (!notifError) {
+                    supabase.functions.invoke('push-notification', {
+                        body: {
+                            type: 'INSERT',
+                            record: {
+                                user_id: selectedApp.worker_id,
+                                title: 'Offer Accepted! 🎉',
+                                body: `Your offer for "${task.title}" has been accepted.`,
+                                data: { url: `/task/${task.id}` }
+                            }
+                        }
+                    }).catch(console.error)
+                }
+            }
+
             await queryClient.invalidateQueries({ queryKey: ['task', id] })
             setIsAcceptModalOpen(false)
             await queryClient.invalidateQueries({ queryKey: ['task', id] })
@@ -128,6 +156,33 @@ export default function TaskDetails() {
                     .rpc('increment_completed_jobs', { worker_uuid: acceptedApp.worker_id })
 
                 if (rpcError) console.warn('RPC failed', rpcError)
+            }
+
+            // Notify Worker
+            if (acceptedApp && acceptedApp.worker_id) {
+                const { error: notifError } = await supabase
+                    .from('notifications')
+                    .insert({
+                        user_id: acceptedApp.worker_id,
+                        title: 'Task Completed ✅',
+                        body: `The task "${task.title}" has been marked as completed.`,
+                        data: { url: `/task/${task.id}` },
+                        is_read: false
+                    })
+
+                if (!notifError) {
+                    supabase.functions.invoke('push-notification', {
+                        body: {
+                            type: 'INSERT',
+                            record: {
+                                user_id: acceptedApp.worker_id,
+                                title: 'Task Completed ✅',
+                                body: `The task "${task.title}" has been marked as completed.`,
+                                data: { url: `/task/${task.id}` }
+                            }
+                        }
+                    }).catch(console.error)
+                }
             }
 
             // Refresh UI

@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext'
 import { Send, Loader2, ArrowRight } from 'lucide-react'
 import { CommentItem } from './CommentItem'
 
-export function CommentSection({ taskId, onClose }) {
+export function CommentSection({ taskId, taskOwnerId, onClose }) {
     const { user, profile } = useAuth()
     const navigate = useNavigate()
     const [comments, setComments] = useState([])
@@ -107,6 +107,33 @@ export function CommentSection({ taskId, onClose }) {
                 })
 
             if (error) throw error
+
+            // Notify Task Owner
+            if (taskOwnerId && taskOwnerId !== user.id) {
+                const { error: notifError } = await supabase
+                    .from('notifications')
+                    .insert({
+                        user_id: taskOwnerId,
+                        title: 'New Comment 💬',
+                        body: `Someone commented on your task: "${newComment.substring(0, 50)}${newComment.length > 50 ? '...' : ''}"`,
+                        data: { url: `/task/${taskId}` },
+                        is_read: false
+                    })
+
+                if (!notifError) {
+                    supabase.functions.invoke('push-notification', {
+                        body: {
+                            type: 'INSERT',
+                            record: {
+                                user_id: taskOwnerId,
+                                title: 'New Comment 💬',
+                                body: `Someone commented on your task: "${newComment.substring(0, 50)}${newComment.length > 50 ? '...' : ''}"`,
+                                data: { url: `/task/${taskId}` }
+                            }
+                        }
+                    }).catch(console.error)
+                }
+            }
             setNewComment('')
             fetchComments() // Manual refresh for instant feedback
         } catch (err) {

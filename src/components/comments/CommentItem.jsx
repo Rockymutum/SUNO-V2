@@ -35,6 +35,33 @@ export function CommentItem({ comment, taskId, onRefresh }) {
         try {
             if (newLiked) {
                 await supabase.from('comment_likes').insert({ user_id: user.id, comment_id: comment.id })
+
+                // Notify Comment Author
+                if (comment.user_id !== user.id) {
+                    const { error: notifError } = await supabase
+                        .from('notifications')
+                        .insert({
+                            user_id: comment.user_id,
+                            title: 'Comment Liked ❤️',
+                            body: `Someone liked your comment: "${comment.content.substring(0, 30)}..."`,
+                            data: { url: `/task/${taskId}` },
+                            is_read: false
+                        })
+
+                    if (!notifError) {
+                        supabase.functions.invoke('push-notification', {
+                            body: {
+                                type: 'INSERT',
+                                record: {
+                                    user_id: comment.user_id,
+                                    title: 'Comment Liked ❤️',
+                                    body: `Someone liked your comment: "${comment.content.substring(0, 30)}..."`,
+                                    data: { url: `/task/${taskId}` }
+                                }
+                            }
+                        }).catch(console.error)
+                    }
+                }
             } else {
                 await supabase.from('comment_likes').delete().eq('user_id', user.id).eq('comment_id', comment.id)
             }
@@ -72,6 +99,33 @@ export function CommentItem({ comment, taskId, onRefresh }) {
                 parent_id: comment.id
             })
             if (error) throw error
+
+            // Notify Parent Comment Author
+            if (comment.user_id !== user.id) {
+                const { error: notifError } = await supabase
+                    .from('notifications')
+                    .insert({
+                        user_id: comment.user_id,
+                        title: 'New Reply ↩️',
+                        body: `Someone replied to your comment: "${replyText.substring(0, 50)}..."`,
+                        data: { url: `/task/${taskId}` },
+                        is_read: false
+                    })
+
+                if (!notifError) {
+                    supabase.functions.invoke('push-notification', {
+                        body: {
+                            type: 'INSERT',
+                            record: {
+                                user_id: comment.user_id,
+                                title: 'New Reply ↩️',
+                                body: `Someone replied to your comment: "${replyText.substring(0, 50)}..."`,
+                                data: { url: `/task/${taskId}` }
+                            }
+                        }
+                    }).catch(console.error)
+                }
+            }
             setReplyText('')
             setReplying(false)
             if (onRefresh) onRefresh()

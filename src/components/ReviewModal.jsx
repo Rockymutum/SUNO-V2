@@ -30,6 +30,33 @@ export default function ReviewModal({ isOpen, onClose, taskId, workerId, reviewe
 
             if (error) throw error
 
+            // Notify Worker (or whoever was reviewed)
+            if (workerId && workerId !== reviewerId) {
+                const { error: notifError } = await supabase
+                    .from('notifications')
+                    .insert({
+                        user_id: workerId,
+                        title: 'New Review ⭐',
+                        body: `You received a ${rating}-star review!`,
+                        data: { url: `/worker/${workerId}` },
+                        is_read: false
+                    })
+
+                if (!notifError) {
+                    supabase.functions.invoke('push-notification', {
+                        body: {
+                            type: 'INSERT',
+                            record: {
+                                user_id: workerId,
+                                title: 'New Review ⭐',
+                                body: `You received a ${rating}-star review!`,
+                                data: { url: `/worker/${workerId}` }
+                            }
+                        }
+                    }).catch(console.error)
+                }
+            }
+
             alert('Review submitted successfully!')
             if (onReviewSubmitted) onReviewSubmitted()
             onClose()
@@ -81,8 +108,8 @@ export default function ReviewModal({ isOpen, onClose, taskId, workerId, reviewe
                                             <Star
                                                 size={32}
                                                 className={`transition-colors ${(hoverRating || rating) >= star
-                                                        ? 'fill-yellow-400 text-yellow-400'
-                                                        : 'fill-gray-100 text-gray-200'
+                                                    ? 'fill-yellow-400 text-yellow-400'
+                                                    : 'fill-gray-100 text-gray-200'
                                                     }`}
                                             />
                                         </button>
