@@ -130,8 +130,6 @@ export function useChat() {
                         data: { url: `/messages/${conversationId}` },
                         is_read: false
                     })
-                    .select()
-                    .single()
 
                 // Trigger Push Notification directly (Client-side trigger)
                 // This ensures push works even if DB Webhook is missing
