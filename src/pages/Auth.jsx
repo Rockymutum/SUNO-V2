@@ -8,6 +8,10 @@ import { motion } from 'framer-motion'
 import { Modal } from '@/components/ui/Modal'
 import { Mail, Lock, User, ArrowRight, Loader2, Chrome } from 'lucide-react'
 
+// FEATURE FLAG: Set to true to restore email/password authentication
+// Currently hidden per user request (2024-12-24)
+const ENABLE_EMAIL_AUTH = false
+
 export default function Auth() {
     const navigate = useNavigate()
     const { signInWithGoogle } = useAuth()
@@ -119,98 +123,103 @@ export default function Auth() {
                     </p>
                 </div>
 
-                {/* Tabs */}
-                <div className="grid grid-cols-2 bg-slate-100 p-1 rounded-xl">
-                    <button
-                        onClick={() => setMode('signin')}
-                        className={`py-2.5 text-sm font-medium rounded-lg transition-all ${mode === 'signin' ? 'bg-white shadow-sm text-primary' : 'text-gray-500 hover:text-gray-900'
-                            }`}
-                    >
-                        Sign In
-                    </button>
-                    <button
-                        onClick={() => setMode('signup')}
-                        className={`py-2.5 text-sm font-medium rounded-lg transition-all ${mode === 'signup' ? 'bg-white shadow-sm text-primary' : 'text-gray-500 hover:text-gray-900'
-                            }`}
-                    >
-                        Sign Up
-                    </button>
-                </div>
+                {/* Email/Password Authentication - Hidden by feature flag */}
+                {ENABLE_EMAIL_AUTH && (
+                    <>
+                        {/* Tabs */}
+                        <div className="grid grid-cols-2 bg-slate-100 p-1 rounded-xl">
+                            <button
+                                onClick={() => setMode('signin')}
+                                className={`py-2.5 text-sm font-medium rounded-lg transition-all ${mode === 'signin' ? 'bg-white shadow-sm text-primary' : 'text-gray-500 hover:text-gray-900'
+                                    }`}
+                            >
+                                Sign In
+                            </button>
+                            <button
+                                onClick={() => setMode('signup')}
+                                className={`py-2.5 text-sm font-medium rounded-lg transition-all ${mode === 'signup' ? 'bg-white shadow-sm text-primary' : 'text-gray-500 hover:text-gray-900'
+                                    }`}
+                            >
+                                Sign Up
+                            </button>
+                        </div>
 
-                {/* Form */}
-                <form onSubmit={handleAuth} className="space-y-4">
-                    <AnimatePresence mode="wait">
-                        <motion.div
-                            key={mode}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            className="space-y-4"
-                        >
-                            {mode === 'signup' && (
-                                <div>
-                                    <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Full Name</label>
-                                    <div className="relative">
-                                        <User className="absolute left-3 top-3.5 text-gray-400" size={18} />
-                                        <input
-                                            required
-                                            type="text"
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/10 transition-all font-medium"
-                                            placeholder="John Doe"
-                                            value={formData.fullName}
-                                            onChange={e => setFormData({ ...formData, fullName: e.target.value })}
-                                        />
+                        {/* Form */}
+                        <form onSubmit={handleAuth} className="space-y-4">
+                            <AnimatePresence mode="wait">
+                                <motion.div
+                                    key={mode}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                    className="space-y-4"
+                                >
+                                    {mode === 'signup' && (
+                                        <div>
+                                            <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Full Name</label>
+                                            <div className="relative">
+                                                <User className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                                                <input
+                                                    required
+                                                    type="text"
+                                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/10 transition-all font-medium"
+                                                    placeholder="John Doe"
+                                                    value={formData.fullName}
+                                                    onChange={e => setFormData({ ...formData, fullName: e.target.value })}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div>
+                                        <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Email</label>
+                                        <div className="relative">
+                                            <Mail className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                                            <input
+                                                required
+                                                type="email"
+                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/10 transition-all font-medium"
+                                                placeholder="name@example.com"
+                                                value={formData.email}
+                                                onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                            />
+                                        </div>
                                     </div>
+
+                                    <div>
+                                        <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Password</label>
+                                        <div className="relative">
+                                            <Lock className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                                            <input
+                                                required
+                                                type="password"
+                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/10 transition-all font-medium"
+                                                placeholder="••••••••"
+                                                value={formData.password}
+                                                onChange={e => setFormData({ ...formData, password: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            </AnimatePresence>
+
+                            {error && (
+                                <div className="p-3 bg-red-50 text-red-600 text-xs rounded-lg font-medium">
+                                    {error}
                                 </div>
                             )}
 
-                            <div>
-                                <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Email</label>
-                                <div className="relative">
-                                    <Mail className="absolute left-3 top-3.5 text-gray-400" size={18} />
-                                    <input
-                                        required
-                                        type="email"
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/10 transition-all font-medium"
-                                        placeholder="name@example.com"
-                                        value={formData.email}
-                                        onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5 block">Password</label>
-                                <div className="relative">
-                                    <Lock className="absolute left-3 top-3.5 text-gray-400" size={18} />
-                                    <input
-                                        required
-                                        type="password"
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/10 transition-all font-medium"
-                                        placeholder="••••••••"
-                                        value={formData.password}
-                                        onChange={e => setFormData({ ...formData, password: e.target.value })}
-                                    />
-                                </div>
-                            </div>
-                        </motion.div>
-                    </AnimatePresence>
-
-                    {error && (
-                        <div className="p-3 bg-red-50 text-red-600 text-xs rounded-lg font-medium">
-                            {error}
-                        </div>
-                    )}
-
-                    <Button type="submit" className="w-full h-12 text-sm" disabled={loading}>
-                        {loading ? <Loader2 className="animate-spin" /> : (
-                            <>
-                                {mode === 'signin' ? 'Sign In' : 'Create Account'}
-                                <ArrowRight size={16} className="ml-2" />
-                            </>
-                        )}
-                    </Button>
-                </form>
+                            <Button type="submit" className="w-full h-12 text-sm" disabled={loading}>
+                                {loading ? <Loader2 className="animate-spin" /> : (
+                                    <>
+                                        {mode === 'signin' ? 'Sign In' : 'Create Account'}
+                                        <ArrowRight size={16} className="ml-2" />
+                                    </>
+                                )}
+                            </Button>
+                        </form>
+                    </>
+                )}
 
                 <div className="relative">
                     <div className="absolute inset-0 flex items-center">
@@ -218,7 +227,7 @@ export default function Auth() {
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
                         <span className="bg-background px-2 text-muted-foreground text-gray-400 font-medium">
-                            Or continue with
+                            {ENABLE_EMAIL_AUTH ? 'Or continue with' : 'Sign in with'}
                         </span>
                     </div>
                 </div>
