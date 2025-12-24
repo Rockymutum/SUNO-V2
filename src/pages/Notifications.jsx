@@ -163,7 +163,7 @@ export default function Notifications() {
                 )}
 
                 {/* DEBUG: Test Push Button */}
-                {isSubscribed && (
+                {isSubscribed && user && (
                     <div className="mb-4 flex flex-col gap-2 justify-center">
                         <Button
                             variant="outline"
@@ -202,11 +202,9 @@ export default function Notifications() {
                                     size="xs"
                                     variant="destructive"
                                     onClick={async () => {
-                                        if (confirm('Reset Push Setup? This will unregister SW and clear local state.')) {
+                                        if (confirm('Reset Push Setup? This will unregister SW.')) {
                                             const regs = await navigator.serviceWorker.getRegistrations()
                                             for (let reg of regs) await reg.unregister()
-                                            // Also clear from DB if needed, but for now just local clear
-                                            localStorage.clear() // Too aggressive? Just reload after.
                                             alert('Reset complete. Reloading...')
                                             window.location.reload()
                                         }
