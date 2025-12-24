@@ -74,13 +74,14 @@ export function usePushNotifications() {
 
             // 3. Save to Supabase
             if (user) {
+                const subJSON = subscription.toJSON()
                 const { error } = await supabase
                     .from('push_subscriptions')
                     .upsert({
                         user_id: user.id,
                         endpoint: subscription.endpoint,
-                        p256dh: btoa(String.fromCharCode.apply(null, new Uint8Array(subscription.getKey('p256dh')))),
-                        auth: btoa(String.fromCharCode.apply(null, new Uint8Array(subscription.getKey('auth')))),
+                        p256dh: subJSON.keys.p256dh,
+                        auth: subJSON.keys.auth,
                         user_agent: navigator.userAgent
                     }, { onConflict: 'user_id, endpoint' })
 
