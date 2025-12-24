@@ -5,7 +5,7 @@ import { Buffer } from "https://deno.land/std@0.168.0/node/buffer.ts";
 globalThis.Buffer = Buffer;
 globalThis.process = { env: {} } as any; // Polyfill process process.nextTick etc might be needed
 
-import webpush from "https://esm.sh/web-push@3.6.3?target=deno";
+import webpush from "npm:web-push@3.6.3";
 
 // Create Supabase Client
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -78,29 +78,44 @@ serve(async (req) => {
         const notificationPayload = JSON.stringify({ title, body, url });
         console.log(`Sending to ${subscriptions.length} devices...`);
 
-        const promises = subscriptions.map((sub) => {
-            return webpush.sendNotification(
-                {
-                    endpoint: sub.endpoint,
-                    keys: {
-                        p256dh: sub.p256dh,
-                        auth: sub.auth
+        const results = await Promise.all(
+            subscriptions.map(async (sub) => {
+                try {
+                    await webpush.sendNotification(
+                        {
+                            endpoint: sub.endpoint,
+                            keys: {
+                                p256dh: sub.p256dh,
+                                auth: sub.auth
+                            }
+                        },
+                        notificationPayload
+                    );
+                    return { status: 'fulfilled', id: sub.id };
+                } catch (err) {
+                    if (err.statusCode === 410 || err.statusCode === 404) {
+                        try {
+                            await supabase.from("push_subscriptions").delete().eq("id", sub.id);
+                            return { status: 'rejected', id: sub.id, reason: 'Expired (410/404)' };
+                        } catch (delErr) {
+                            return { status: 'rejected', id: sub.id, reason: 'Expired + Delete Failed' };
+                        }
                     }
-                },
-                notificationPayload
-            ).catch((err) => {
-                if (err.statusCode === 410 || err.statusCode === 404) {
-                    console.log(`Subscription ${sub.id} expired/gone. Deleting.`);
-                    supabase.from("push_subscriptions").delete().eq("id", sub.id).then();
-                } else {
                     console.error("Push Error:", err);
+                    return { status: 'rejected', id: sub.id, reason: err.message || err.toString() };
                 }
-            });
-        });
+            })
+        );
 
-        await Promise.all(promises);
+        const successes = results.filter(r => r.status === 'fulfilled').length;
+        const failures = results.filter(r => r.status === 'rejected');
 
-        return new Response(JSON.stringify({ success: true, count: subscriptions.length }), {
+        return new Response(JSON.stringify({
+            success: true,
+            total: subscriptions.length,
+            sent: successes,
+            failures: failures
+        }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
 
