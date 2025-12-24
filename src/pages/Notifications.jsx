@@ -162,6 +162,39 @@ export default function Notifications() {
                     </div>
                 )}
 
+                {/* DEBUG: Test Push Button */}
+                {isSubscribed && (
+                    <div className="mb-4 flex justify-center">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                                try {
+                                    alert('Sending test push...')
+                                    const { data, error } = await supabase.functions.invoke('push-notification', {
+                                        body: {
+                                            type: 'INSERT',
+                                            record: {
+                                                user_id: user.id,
+                                                title: 'Test Success! 🚀',
+                                                body: 'Push notifications are working correctly.',
+                                                data: { url: '/notifications' }
+                                            }
+                                        }
+                                    })
+                                    if (error) throw error
+                                    alert('Sent! Check status bar.')
+                                } catch (e) {
+                                    alert('Error: ' + e.message)
+                                    console.error(e)
+                                }
+                            }}
+                        >
+                            🔔 Test Push
+                        </Button>
+                    </div>
+                )}
+
                 {isLoading ? (
                     <div className="space-y-4 pt-4">
                         {[1, 2, 3].map(i => (
