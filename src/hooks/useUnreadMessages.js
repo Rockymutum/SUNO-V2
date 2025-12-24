@@ -52,9 +52,20 @@ export function useUnreadMessages() {
                     // If 'participant_ids' is an array, generic UPDATE listing is safer if filter fails.
                 },
                 (payload) => {
-                    // Invalidate to refetch or manually update cache
+                    // Invalidate on conversation update
                     queryClient.invalidateQueries(['unread-messages-count', user.id])
-                    queryClient.invalidateQueries(['conversations', user.id])
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'messages',
+                },
+                () => {
+                    // Invalidate on new message (faster than waiting for conversation update)
+                    queryClient.invalidateQueries(['unread-messages-count', user.id])
                 }
             )
             .subscribe()

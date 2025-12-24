@@ -75,21 +75,21 @@ export default function BottomNav() {
                                 className="relative flex-1 flex flex-col items-center justify-center py-2 touch-manipulation active:scale-95 transition-transform duration-100"
                             >
                                 {/* Icon Container */}
-                                <div className="relative z-10">
+                                <div className="relative inline-block">
                                     <Icon
                                         size={24}
                                         strokeWidth={isActive ? 2.5 : 2}
-                                        className={`transition-all duration-300 ${isActive
+                                        className={`transition-all duration-300 relative z-10 ${isActive
                                             ? 'text-black'
                                             : 'text-gray-400 group-hover:text-gray-600'
                                             }`}
                                     />
+                                    {item.name === 'Messages' && unreadCount > 0 && (
+                                        <span className="absolute -top-1.5 -right-2 z-20 min-w-[18px] h-[18px] bg-red-600 text-white text-[10px] font-bold flex items-center justify-center rounded-full px-1 border-2 border-white shadow-sm">
+                                            {unreadCount > 99 ? '99+' : unreadCount}
+                                        </span>
+                                    )}
                                 </div>
-                                {item.name === 'Messages' && unreadCount > 0 && (
-                                    <span className="absolute top-1 right-1/2 -mr-4 min-w-[16px] h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full px-1 border border-white">
-                                        {unreadCount > 99 ? '99+' : unreadCount}
-                                    </span>
-                                )}
 
 
                                 {/* Label */}
