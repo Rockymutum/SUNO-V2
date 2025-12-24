@@ -108,7 +108,7 @@ export default function Notifications() {
     }
 
     return (
-        <div className="min-h-screen bg-white pb-20">
+        <div className="min-h-[100dvh] bg-white pb-20">
             {/* Header */}
             <div className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-md z-10 px-4 h-14 flex items-center justify-between border-b border-slate-100">
                 <div className="flex items-center gap-3">

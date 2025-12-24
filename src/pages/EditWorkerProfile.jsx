@@ -136,7 +136,7 @@ export default function EditWorkerProfile() {
     }
 
     return (
-        <div className="bg-white min-h-screen pb-safe">
+        <div className="bg-white min-h-[100dvh] pb-safe">
             {/* Header */}
             <button
                 onClick={() => navigate(-1)}

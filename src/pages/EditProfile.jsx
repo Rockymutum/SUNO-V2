@@ -90,7 +90,7 @@ export default function EditProfile() {
     }
 
     return (
-        <div className="bg-white min-h-screen pb-safe">
+        <div className="bg-white min-h-[100dvh] pb-safe">
             {/* Header */}
             {/* Header */}
             <button

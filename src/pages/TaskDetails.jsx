@@ -188,8 +188,8 @@ export default function TaskDetails() {
         }
     }
 
-    if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>
-    if (!task) return <div className="h-screen flex items-center justify-center">Task not found</div>
+    if (loading) return <div className="h-[100dvh] flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>
+    if (!task) return <div className="h-[100dvh] flex items-center justify-center">Task not found</div>
 
     // Creator data fallback
     const creator = task.creator || { display_name: 'Anonymous', avatar_url: null }
@@ -199,7 +199,7 @@ export default function TaskDetails() {
     const category = CATEGORIES.find(c => c.id === task.category)
 
     return (
-        <div className="bg-white min-h-screen pb-[calc(6rem+env(safe-area-inset-bottom))] relative">
+        <div className="bg-white min-h-[100dvh] pb-[calc(6rem+env(safe-area-inset-bottom))] relative">
 
 
             {/* Header Image with Back Button */}

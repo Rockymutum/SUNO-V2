@@ -5,7 +5,7 @@ export default function Welcome() {
     const navigate = useNavigate()
 
     return (
-        <div className="relative h-screen w-full overflow-hidden font-sans">
+        <div className="relative h-[100dvh] w-full overflow-hidden font-sans">
 
             {/* Background: Subtle Gradient */}
             <div className="absolute inset-0 bg-gradient-to-b from-[#EEF3FF] to-white z-0" />

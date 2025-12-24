@@ -44,15 +44,15 @@ export default function PublicProfile() {
         if (id) fetchProfile()
     }, [id])
 
-    if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>
-    if (!profile) return <div className="h-screen flex items-center justify-center">User not found</div>
+    if (loading) return <div className="h-[100dvh] flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>
+    if (!profile) return <div className="h-[100dvh] flex items-center justify-center">User not found</div>
 
     const joinedDate = new Date(profile.created_at).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
     const bio = profile.bio || `Hi, I'm ${profile.display_name}.`
     const location = profile.location || 'Unknown Location'
 
     return (
-        <div className="pb-24 relative bg-gray-50 min-h-screen">
+        <div className="pb-24 relative bg-gray-50 min-h-[100dvh]">
             <button
                 onClick={() => navigate(-1)}
                 className="absolute top-4 left-4 p-2 bg-white/80 backdrop-blur-md rounded-full text-primary hover:bg-white shadow-sm z-10 border border-slate-100"

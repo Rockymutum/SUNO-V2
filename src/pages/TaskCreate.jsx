@@ -102,7 +102,7 @@ export default function TaskCreate() {
     }
 
     return (
-        <div className="bg-white min-h-screen pb-safe">
+        <div className="bg-white h-[100dvh] overflow-y-auto pb-safe">
             {/* Header */}
             <div className="fixed top-0 left-0 right-0 h-16 bg-white z-50 px-4 flex items-center justify-between border-b border-gray-100">
                 <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-gray-500">

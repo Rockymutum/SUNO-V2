@@ -248,7 +248,7 @@ export default function Chat() {
     const lastSeenText = getLastSeenText()
     const isOnline = lastSeenText === 'Online'
 
-    if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>
+    if (loading) return <div className="h-[100dvh] flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>
 
     return (
         <div className="flex flex-col h-[100dvh] fixed inset-0 z-50 bg-white">

@@ -117,7 +117,7 @@ export default function PrivacySecurity() {
     }
 
     return (
-        <div className="bg-white min-h-screen pb-safe relative">
+        <div className="bg-white min-h-[100dvh] pb-safe relative">
             {/* Header */}
             <div className="fixed top-0 left-0 right-0 h-16 bg-white z-40 px-4 flex items-center gap-4 border-b border-gray-100">
                 <button

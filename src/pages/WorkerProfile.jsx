@@ -70,8 +70,8 @@ export default function WorkerProfile() {
     const stats = profileData?.stats || { jobs: 0, rating: 0 }
     const reviews = profileData?.reviews || []
 
-    if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>
-    if (!profile) return <div className="h-screen flex items-center justify-center">User not found</div>
+    if (loading) return <div className="h-[100dvh] flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>
+    if (!profile) return <div className="h-[100dvh] flex items-center justify-center">User not found</div>
 
     // Fallback data if fields are missing in schema
     const jobTitle = profile.job_title || 'Community Member'
@@ -80,7 +80,7 @@ export default function WorkerProfile() {
     const phone = (profile.hide_phone ? null : profile.phone) || 'Hidden'
 
     return (
-        <div className="bg-gray-50/50 min-h-screen pb-safe">
+        <div className="bg-gray-50/50 min-h-[100dvh] pb-safe">
             {/* Navigation */}
             <div className="fixed top-0 left-0 right-0 p-4 z-50 flex justify-between items-center pointer-events-none">
                 <button
