@@ -10,27 +10,32 @@ cleanupOutdatedCaches()
 precacheAndRoute(self.__WB_MANIFEST)
 
 // Push Notification Event Listener
+// Push Notification Event Listener
 self.addEventListener('push', (event) => {
+    console.log('[SW] Push Received', event);
     let data = {}
     try {
         data = event.data ? event.data.json() : {}
+        console.log('[SW] Push Data:', data);
     } catch (e) {
+        console.error('[SW] Error parsing push data', e);
         data = { title: 'New Notification', body: event.data ? event.data.text() : 'You have a new message' }
     }
 
     const title = data.title || 'SUNOMSI'
     const options = {
         body: data.body || 'New update available',
-        icon: '/pwa-192x192.png',
-        badge: '/pwa-192x192.png',
+        icon: '/logo.png', // Fixed: pwa-192x192.png didn't exist
+        badge: '/logo.png',
         data: {
             url: data.url || '/'
         }
-        // actions: [] // Can add actions later
     }
 
     event.waitUntil(
         self.registration.showNotification(title, options)
+            .then(() => console.log('[SW] Notification shown'))
+            .catch(err => console.error('[SW] Error showing notification:', err))
     )
 })
 
