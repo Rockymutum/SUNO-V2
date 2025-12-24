@@ -255,7 +255,16 @@ export default function Chat() {
             {/* Header */}
             <div className="h-16 px-4 bg-white/80 backdrop-blur border-b border-slate-100 flex items-center justify-between flex-shrink-0 pt-[env(safe-area-inset-top)]">
                 <div className="flex items-center gap-3">
-                    <button onClick={() => navigate(-1)} className="p-1 -ml-1 text-gray-500">
+                    <button
+                        onClick={() => {
+                            if (window.history.state && window.history.state.idx > 0) {
+                                navigate(-1)
+                            } else {
+                                navigate('/messages')
+                            }
+                        }}
+                        className="p-1 -ml-1 text-gray-500"
+                    >
                         <ChevronLeft size={24} />
                     </button>
                     <Avatar src={otherUser?.avatar_url} alt={otherUser?.display_name} size="sm" />

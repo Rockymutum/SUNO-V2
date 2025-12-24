@@ -269,7 +269,13 @@ export default function TaskDetails() {
                 )}
                 <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-transparent" />
                 <button
-                    onClick={() => navigate(-1)}
+                    onClick={() => {
+                        if (window.history.state && window.history.state.idx > 0) {
+                            navigate(-1)
+                        } else {
+                            navigate('/') // Fallback to Home
+                        }
+                    }}
                     className="absolute top-4 left-4 p-2 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white/30"
                 >
                     <ChevronLeft size={24} />
