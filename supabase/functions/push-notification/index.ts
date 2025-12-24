@@ -49,7 +49,9 @@ serve(async (req) => {
         // We only care about NEW notifications being inserted
         if (type !== 'INSERT' || !record.user_id || !record.title) {
             console.log("Skipping: Not a valid notification insert trigger");
-            return new Response(JSON.stringify({ message: "Skipped" }), { headers: { "Content-Type": "application/json" } });
+            return new Response(JSON.stringify({ message: "Skipped" }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" }
+            });
         }
 
         const userId = record.user_id;
@@ -67,7 +69,9 @@ serve(async (req) => {
 
         if (!subscriptions || subscriptions.length === 0) {
             console.log(`No subscriptions found for user ${userId}`);
-            return new Response(JSON.stringify({ message: "No subscriptions" }), { headers: { "Content-Type": "application/json" } });
+            return new Response(JSON.stringify({ message: "No subscriptions" }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" }
+            });
         }
 
         // 2. Send Notifications
@@ -97,11 +101,14 @@ serve(async (req) => {
         await Promise.all(promises);
 
         return new Response(JSON.stringify({ success: true, count: subscriptions.length }), {
-            headers: { "Content-Type": "application/json" },
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
 
     } catch (error) {
         console.error("Error processing trigger:", error);
-        return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+        return new Response(JSON.stringify({ error: (error as Error).message }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
     }
 });
