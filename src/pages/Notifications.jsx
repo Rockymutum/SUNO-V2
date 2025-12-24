@@ -164,7 +164,7 @@ export default function Notifications() {
 
                 {/* DEBUG: Test Push Button */}
                 {isSubscribed && (
-                    <div className="mb-4 flex justify-center">
+                    <div className="mb-4 flex flex-col gap-2 justify-center">
                         <Button
                             variant="outline"
                             size="sm"
@@ -192,6 +192,30 @@ export default function Notifications() {
                         >
                             🔔 Test Push
                         </Button>
+
+                        <details className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                            <summary>Debug Info</summary>
+                            <div className="mt-2 space-y-2">
+                                <p><strong>Permission:</strong> {Notification.permission}</p>
+                                <p><strong>SW Active:</strong> {navigator.serviceWorker?.controller ? 'Yes' : 'No'}</p>
+                                <Button
+                                    size="xs"
+                                    variant="destructive"
+                                    onClick={async () => {
+                                        if (confirm('Reset Push Setup? This will unregister SW and clear local state.')) {
+                                            const regs = await navigator.serviceWorker.getRegistrations()
+                                            for (let reg of regs) await reg.unregister()
+                                            // Also clear from DB if needed, but for now just local clear
+                                            localStorage.clear() // Too aggressive? Just reload after.
+                                            alert('Reset complete. Reloading...')
+                                            window.location.reload()
+                                        }
+                                    }}
+                                >
+                                    Reset / Unregister SW
+                                </Button>
+                            </div>
+                        </details>
                     </div>
                 )}
 
