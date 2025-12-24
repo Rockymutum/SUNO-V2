@@ -183,7 +183,13 @@ export default function Notifications() {
                                         }
                                     })
                                     if (error) throw error
-                                    alert('Sent! Check status bar.')
+
+                                    const { sent, total, failures } = data
+                                    if (sent > 0) {
+                                        alert(`Sent to ${sent}/${total} devices! Check status bar.`)
+                                    } else {
+                                        alert(`Failed to send. Errors: ${JSON.stringify(failures)}`)
+                                    }
                                 } catch (e) {
                                     alert('Error: ' + e.message)
                                     console.error(e)
