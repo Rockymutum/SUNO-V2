@@ -1,6 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
-import webpush from "https://esm.sh/web-push@3.6.3";
+// web-push uses Buffer, so we MUST polyfill it for Deno
+import { Buffer } from "https://deno.land/std@0.168.0/node/buffer.ts";
+globalThis.Buffer = Buffer;
+globalThis.process = { env: {} } as any; // Polyfill process process.nextTick etc might be needed
+
+import webpush from "https://esm.sh/web-push@3.6.3?target=deno";
 
 // Create Supabase Client
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -8,15 +13,34 @@ const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // VAPID Keys
-const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY")!;
-const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY")!;
-const vapidSubject = "mailto:admin@autono.com"; // Replace with real email
+const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
+const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY");
+const vapidSubject = "mailto:admin@autono.com";
 
-webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
+if (vapidPublicKey && vapidPrivateKey) {
+    try {
+        webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
+        console.log("VAPID Configured Successfully");
+    } catch (e) {
+        console.error("VAPID Config Error:", e);
+    }
+} else {
+    console.error("VAPID Keys Missing in Env");
+}
 
 console.log("Push Notification Function Initialized");
 
+const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
 serve(async (req) => {
+    // Handle CORS preflight request
+    if (req.method === 'OPTIONS') {
+        return new Response('ok', { headers: corsHeaders })
+    }
+
     try {
         const { record, type } = await req.json();
 
