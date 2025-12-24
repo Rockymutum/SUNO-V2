@@ -121,7 +121,7 @@ export function useChat() {
 
                 const senderName = senderProfile?.display_name || 'User'
 
-                await supabase
+                const { data: notifData, error: notifError } = await supabase
                     .from('notifications')
                     .insert({
                         user_id: otherUserId,
@@ -130,6 +130,24 @@ export function useChat() {
                         data: { url: `/messages/${conversationId}` },
                         is_read: false
                     })
+                    .select()
+                    .single()
+
+                // Trigger Push Notification directly (Client-side trigger)
+                // This ensures push works even if DB Webhook is missing
+                if (!notifError) {
+                    supabase.functions.invoke('push-notification', {
+                        body: {
+                            type: 'INSERT',
+                            record: {
+                                user_id: otherUserId,
+                                title: `New message from ${senderName}`,
+                                body: text,
+                                data: { url: `/messages/${conversationId}` }
+                            }
+                        }
+                    }).catch(console.error) // Fire and forget
+                }
             }
 
             await queryClient.invalidateQueries({ queryKey: ['conversations'] })
