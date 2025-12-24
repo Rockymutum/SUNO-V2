@@ -3,19 +3,20 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
-import { Send, ChevronLeft, Paperclip, Loader2 } from 'lucide-react'
+import { Send, ChevronLeft, Paperclip, Loader2, Edit2, Trash2, X, Check } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/context/AuthContext'
 import { useChat } from '@/hooks/useChat'
 import { usePresence } from '@/hooks/usePresence'
 import { supabase } from '@/lib/supabase'
 import { formatDistanceToNow } from 'date-fns'
+import { Modal } from '@/components/ui/Modal'
 
 export default function Chat() {
     const { id: conversationId } = useParams()
     const navigate = useNavigate()
     const { user } = useAuth()
-    const { fetchMessages, sendMessage, markAsRead } = useChat()
+    const { fetchMessages, sendMessage, markAsRead, editMessage, deleteMessage } = useChat()
 
     const queryClient = useQueryClient()
 
@@ -28,6 +29,12 @@ export default function Chat() {
     })
     const [input, setInput] = useState('')
     const [otherUser, setOtherUser] = useState(null)
+    const [longPressTimer, setLongPressTimer] = useState(null)
+    const [selectedMessage, setSelectedMessage] = useState(null)
+    const [showActionModal, setShowActionModal] = useState(false)
+    const [editingMessageId, setEditingMessageId] = useState(null)
+    const [editText, setEditText] = useState('')
+    const [deleteConfirmModal, setDeleteConfirmModal] = useState(false)
 
     // Use React Query for caching to prevent constant reload spinners
     const { data: initialMessages, isLoading: messagesLoading } = useQuery({
@@ -248,6 +255,60 @@ export default function Chat() {
     const lastSeenText = getLastSeenText()
     const isOnline = lastSeenText === 'Online'
 
+    // Long press handlers for message actions
+    const handleTouchStart = (msg) => {
+        if (msg.sender_id !== user.id || msg.isOptimistic) return
+        const timer = setTimeout(() => {
+            setSelectedMessage(msg)
+            setShowActionModal(true)
+        }, 500) // 500ms long press
+        setLongPressTimer(timer)
+    }
+
+    const handleTouchEnd = () => {
+        if (longPressTimer) {
+            clearTimeout(longPressTimer)
+            setLongPressTimer(null)
+        }
+    }
+
+    const handleEditClick = () => {
+        setShowActionModal(false)
+        setEditingMessageId(selectedMessage.id)
+        setEditText(selectedMessage.body)
+    }
+
+    const handleDeleteClick = () => {
+        setShowActionModal(false)
+        setDeleteConfirmModal(true)
+    }
+
+    const confirmDelete = async () => {
+        try {
+            await deleteMessage(selectedMessage.id, conversationId)
+            setDeleteConfirmModal(false)
+            setSelectedMessage(null)
+        } catch (err) {
+            alert('Failed to delete message')
+        }
+    }
+
+    const saveEdit = async () => {
+        if (!editText.trim()) return
+        try {
+            await editMessage(editingMessageId, editText.trim())
+            setEditingMessageId(null)
+            setEditText('')
+        } catch (err) {
+            alert('Failed to edit message')
+        }
+    }
+
+    const cancelEdit = () => {
+        setEditingMessageId(null)
+        setEditText('')
+    }
+
     if (loading) return <div className="h-[100dvh] flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>
 
     return (
@@ -281,6 +342,8 @@ export default function Chat() {
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
                 {messages.map((msg) => {
                     const isMe = msg.sender_id === user.id
+                    const isEditing = editingMessageId === msg.id
+
                     return (
                         <motion.div
                             initial={{ opacity: 0, y: 10 }}
@@ -288,13 +351,41 @@ export default function Chat() {
                             key={msg.id}
                             className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
                         >
-                            <div className={`max-w-[80%] p-3 rounded-2xl text-sm ${isMe ? 'bg-primary text-white rounded-tr-none' : 'bg-white border border-slate-100 shadow-sm rounded-tl-none'} ${msg.isOptimistic ? 'opacity-70' : ''}`}>
-                                <p>{msg.body}</p>
-                                <span className={`text-[10px] block mt-1 ${isMe ? 'text-white/60' : 'text-gray-400'}`}>
-                                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    {msg.isOptimistic && ' • Sending...'}
-                                </span>
-                            </div>
+                            {isEditing ? (
+                                <div className="max-w-[80%] bg-white border-2 border-primary rounded-2xl p-3">
+                                    <input
+                                        autoFocus
+                                        value={editText}
+                                        onChange={(e) => setEditText(e.target.value)}
+                                        className="w-full bg-transparent text-sm focus:outline-none mb-2"
+                                        onKeyPress={(e) => e.key === 'Enter' && saveEdit()}
+                                    />
+                                    <div className="flex gap-2 justify-end">
+                                        <button onClick={cancelEdit} className="p-1.5 text-gray-500 hover:bg-gray-100 rounded">
+                                            <X size={16} />
+                                        </button>
+                                        <button onClick={saveEdit} className="p-1.5 text-primary hover:bg-primary/10 rounded">
+                                            <Check size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div
+                                    className={`max-w-[80%] p-3 rounded-2xl text-sm ${isMe ? 'bg-primary text-white rounded-tr-none' : 'bg-white border border-slate-100 shadow-sm rounded-tl-none'} ${msg.isOptimistic ? 'opacity-70' : ''}`}
+                                    onTouchStart={() => handleTouchStart(msg)}
+                                    onTouchEnd={handleTouchEnd}
+                                    onMouseDown={() => handleTouchStart(msg)}
+                                    onMouseUp={handleTouchEnd}
+                                    onMouseLeave={handleTouchEnd}
+                                >
+                                    <p>{msg.body}</p>
+                                    <span className={`text-[10px] block mt-1 ${isMe ? 'text-white/60' : 'text-gray-400'}`}>
+                                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        {msg.isOptimistic && ' • Sending...'}
+                                        {msg.edited_at && ' • Edited'}
+                                    </span>
+                                </div>
+                            )}
                         </motion.div>
                     )
                 })}
@@ -334,6 +425,45 @@ export default function Chat() {
                     <Send size={18} />
                 </Button>
             </form>
+
+            {/* Message Action Modal */}
+            <Modal
+                isOpen={showActionModal}
+                onClose={() => setShowActionModal(false)}
+                title="Message Actions"
+            >
+                <div className="space-y-2">
+                    <button
+                        onClick={handleEditClick}
+                        className="w-full flex items-center gap-3 p-3 hover:bg-slate-50 rounded-lg transition-colors"
+                    >
+                        <Edit2 size={18} className="text-primary" />
+                        <span className="font-medium">Edit Message</span>
+                    </button>
+                    <button
+                        onClick={handleDeleteClick}
+                        className="w-full flex items-center gap-3 p-3 hover:bg-red-50 rounded-lg transition-colors text-red-600"
+                    >
+                        <Trash2 size={18} />
+                        <span className="font-medium">Delete Message</span>
+                    </button>
+                </div>
+            </Modal>
+
+            {/* Delete Confirmation Modal */}
+            <Modal
+                isOpen={deleteConfirmModal}
+                onClose={() => setDeleteConfirmModal(false)}
+                title="Delete Message"
+            >
+                <div className="space-y-4">
+                    <p className="text-gray-600">Are you sure you want to delete this message? This action cannot be undone.</p>
+                    <div className="flex gap-3 justify-end">
+                        <Button variant="secondary" onClick={() => setDeleteConfirmModal(false)}>Cancel</Button>
+                        <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={confirmDelete}>Delete</Button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     )
 }

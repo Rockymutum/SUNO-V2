@@ -244,6 +244,96 @@ export function useChat() {
         }
     }, [queryClient])
 
+    // Edit a message
+    const editMessage = useCallback(async (messageId, newText) => {
+        try {
+            const { error } = await supabase
+                .from('messages')
+                .update({
+                    body: newText,
+                    edited_at: new Date().toISOString()
+                })
+                .eq('id', messageId)
+
+            if (error) throw error
+
+            // Invalidate queries to refresh UI
+            await queryClient.invalidateQueries({ queryKey: ['messages'] })
+            return true
+        } catch (err) {
+            console.error('Error editing message:', err)
+            throw err
+        }
+    }, [queryClient])
+
+    // Delete a message (hard delete from database)
+    const deleteMessage = useCallback(async (messageId, conversationId) => {
+        try {
+            const { error } = await supabase
+                .from('messages')
+                .delete()
+                .eq('id', messageId)
+
+            if (error) throw error
+
+            // Update conversation's last_message if needed
+            // Fetch the latest message for this conversation
+            const { data: latestMessage } = await supabase
+                .from('messages')
+                .select('body, created_at')
+                .eq('conversation_id', conversationId)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle()
+
+            // Update conversation
+            await supabase
+                .from('conversations')
+                .update({
+                    last_message: latestMessage?.body || null,
+                    last_message_at: latestMessage?.created_at || new Date().toISOString()
+                })
+                .eq('id', conversationId)
+
+            // Invalidate queries
+            await queryClient.invalidateQueries({ queryKey: ['messages'] })
+            await queryClient.invalidateQueries({ queryKey: ['conversations'] })
+            return true
+        } catch (err) {
+            console.error('Error deleting message:', err)
+            throw err
+        }
+    }, [queryClient])
+
+    // Delete entire conversation and all its messages
+    const deleteConversation = useCallback(async (conversationId) => {
+        try {
+            // Delete all messages first
+            const { error: messagesError } = await supabase
+                .from('messages')
+                .delete()
+                .eq('conversation_id', conversationId)
+
+            if (messagesError) throw messagesError
+
+            // Delete the conversation
+            const { error: convError } = await supabase
+                .from('conversations')
+                .delete()
+                .eq('id', conversationId)
+
+            if (convError) throw convError
+
+            // Invalidate queries
+            await queryClient.invalidateQueries({ queryKey: ['conversations'] })
+            await queryClient.invalidateQueries({ queryKey: ['unread-messages-count'] })
+            return true
+        } catch (err) {
+            console.error('Error deleting conversation:', err)
+            throw err
+        }
+    }, [queryClient])
+
     return {
         loading,
         error,
@@ -251,6 +341,9 @@ export function useChat() {
         fetchMessages,
         sendMessage,
         getOrCreateConversation,
-        markAsRead
+        markAsRead,
+        editMessage,
+        deleteMessage,
+        deleteConversation
     }
 }
