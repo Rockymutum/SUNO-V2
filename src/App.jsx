@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Analytics } from '@vercel/analytics/react'
 import Layout from './components/layout/Layout'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { PWAProvider } from './context/PWAContext.jsx'
@@ -79,7 +80,7 @@ function App() {
           </AuthProvider>
         </PWAProvider>
       </BrowserRouter>
-
+      <Analytics />
     </QueryClientProvider>
   )
 }
