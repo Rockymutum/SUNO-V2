@@ -78,15 +78,13 @@ export default function Messages() {
                                 )}
                             </div>
                             <div className="flex-1 min-w-0 pr-12">
-                                <div className="flex justify-between items-baseline mb-0.5">
-                                    <h3 className="font-bold text-sm text-gray-900 truncate">{otherUser.display_name || 'Unknown User'}</h3>
-                                    <span className="text-[10px] text-gray-400 whitespace-nowrap ml-2">
-                                        {conv.last_message_at ? formatDistanceToNow(new Date(conv.last_message_at), { addSuffix: true }) : ''}
-                                    </span>
-                                </div>
+                                <h3 className="font-bold text-sm text-gray-900 truncate">{otherUser.display_name || 'Unknown User'}</h3>
                                 <p className="text-sm truncate text-gray-500">
                                     {conv.last_message || 'Start chatting...'}
                                 </p>
+                                <span className="text-[10px] text-gray-400 mt-0.5 block">
+                                    {conv.last_message_at ? formatDistanceToNow(new Date(conv.last_message_at), { addSuffix: true }) : ''}
+                                </span>
                             </div>
                         </Link>
                         <button

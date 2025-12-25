@@ -284,17 +284,15 @@ export default function Notifications() {
                                             <Icon size={18} />
                                         </div>
                                         <div className="flex-1 min-w-0 pr-12">
-                                            <div className="flex justify-between items-start gap-2">
-                                                <h3 className={`font-semibold text-sm truncate ${!n.is_read && 'text-primary'}`}>
-                                                    {n.title}
-                                                </h3>
-                                                <span className="text-[10px] text-gray-400 whitespace-nowrap">
-                                                    {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
-                                                </span>
-                                            </div>
+                                            <h3 className={`font-semibold text-sm truncate ${!n.is_read && 'text-primary'}`}>
+                                                {n.title}
+                                            </h3>
                                             <p className="text-xs text-gray-600 mt-0.5 line-clamp-2 leading-relaxed">
                                                 {n.body}
                                             </p>
+                                            <span className="text-[10px] text-gray-400 mt-1 block">
+                                                {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                                            </span>
                                         </div>
                                     </div>
 
