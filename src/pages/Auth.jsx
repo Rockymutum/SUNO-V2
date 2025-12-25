@@ -240,7 +240,7 @@ export default function Auth() {
                 >
                     {/* Using a simple generic icon if Google logo isn't available in Lucide or use Chrome icon as proxy */}
                     <Chrome size={18} className="mr-2 text-slate-700" />
-                    Google
+                    Continue with Google
                 </Button>
             </div>
         </div>
