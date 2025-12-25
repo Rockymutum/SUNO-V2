@@ -283,7 +283,7 @@ export default function Notifications() {
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${color}`}>
                                             <Icon size={18} />
                                         </div>
-                                        <div className="flex-1 min-w-0">
+                                        <div className="flex-1 min-w-0 pr-12">
                                             <div className="flex justify-between items-start gap-2">
                                                 <h3 className={`font-semibold text-sm truncate ${!n.is_read && 'text-primary'}`}>
                                                     {n.title}

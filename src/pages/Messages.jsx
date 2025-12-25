@@ -77,7 +77,7 @@ export default function Messages() {
                                     </span>
                                 )}
                             </div>
-                            <div className="flex-1 min-w-0">
+                            <div className="flex-1 min-w-0 pr-12">
                                 <div className="flex justify-between items-baseline mb-0.5">
                                     <h3 className="font-bold text-sm text-gray-900 truncate">{otherUser.display_name || 'Unknown User'}</h3>
                                     <span className="text-[10px] text-gray-400 whitespace-nowrap ml-2">
