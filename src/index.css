@@ -49,18 +49,36 @@
   }
 
   /* Prevent iOS blue overlay on text selection */
-  * {
+  /* Only allow selection on text content elements */
+  input,
+  textarea,
+  [contenteditable="true"] {
     -webkit-user-select: text;
     user-select: text;
   }
 
-  /* But disable selection on interactive elements */
-  button,
-  a,
-  input[type="button"],
-  input[type="submit"] {
+  /* Disable selection on all other elements by default */
+  *:not(input):not(textarea):not([contenteditable="true"]) {
     -webkit-user-select: none;
     user-select: none;
+  }
+
+  /* Re-enable for specific text elements where selection makes sense */
+  p,
+  span,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  li,
+  td,
+  th,
+  pre,
+  code {
+    -webkit-user-select: text;
+    user-select: text;
   }
 }
 

@@ -5,8 +5,18 @@ import { createPortal } from 'react-dom'
 
 export function Modal({ isOpen, onClose, title, children }) {
     useEffect(() => {
-        if (isOpen) document.body.style.overflow = 'hidden'
-        else document.body.style.overflow = 'unset'
+        if (isOpen) {
+            // Clear any active text selection when modal opens
+            if (window.getSelection) {
+                const selection = window.getSelection()
+                if (selection) {
+                    selection.removeAllRanges()
+                }
+            }
+            document.body.style.overflow = 'hidden'
+        } else {
+            document.body.style.overflow = 'unset'
+        }
         return () => { document.body.style.overflow = 'unset' }
     }, [isOpen])
 
@@ -19,7 +29,7 @@ export function Modal({ isOpen, onClose, title, children }) {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+                    className="absolute inset-0 bg-black/40 backdrop-blur-sm select-none"
                     onClick={onClose}
                 />
                 <motion.div
