@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import TopBar from './TopBar'
 import BottomNav from './BottomNav'
 import { AnimatePresence, motion } from 'framer-motion'
+import { OpenInAppBanner } from '@/components/OpenInAppBanner'
 
 export default function Layout() {
     const location = useLocation()
@@ -30,6 +31,9 @@ export default function Layout() {
         <div className="w-full h-full bg-background text-primary font-sans flex flex-col overflow-hidden">
             {/* Background fill */}
             <div className="absolute inset-0 z-0 bg-background" />
+
+            {/* Open in App Banner */}
+            <OpenInAppBanner />
 
             {showNav && <TopBar onSearchClick={() => setIsSearchOpen(true)} />}
 

@@ -147,21 +147,38 @@ export function TaskCard({ task, onDelete }) {
                 await Promise.all(photos.map(url => deleteImage(url)))
             }
 
-            const { error, data } = await supabase.from('tasks').delete().eq('id', id).select()
+            // Delete the task - removed .select() to avoid permission issues
+            const { error } = await supabase
+                .from('tasks')
+                .delete()
+                .eq('id', id)
+
             if (error) throw error
 
-            if (!data || data.length === 0) {
-                throw new Error("Deletion failed (likely permission denied)")
-            }
+            // Close the modal
+            setIsDeleteModalOpen(false)
 
+            // Call the onDelete callback if provided
             if (onDelete) {
                 onDelete(id)
             } else {
+                // Fallback to reload if no callback
                 window.location.reload()
             }
         } catch (error) {
             console.error('Error deleting task:', error)
-            setErrorModal({ isOpen: true, message: 'Failed to delete task' })
+            setIsDeleteModalOpen(false)
+
+            // Show detailed error message
+            const errorMessage = error.message || 'Failed to delete task'
+            const detailedMessage = error.code
+                ? `${errorMessage} (Error code: ${error.code})`
+                : errorMessage
+
+            setErrorModal({
+                isOpen: true,
+                message: detailedMessage
+            })
         }
     }
 
@@ -346,10 +363,13 @@ export function TaskCard({ task, onDelete }) {
             <Modal
                 isOpen={errorModal.isOpen}
                 onClose={() => setErrorModal({ isOpen: false, message: '' })}
-                title="Error"
+                title="Error Deleting Task"
             >
                 <div className="space-y-4">
                     <p className="text-gray-600">{errorModal.message}</p>
+                    <p className="text-sm text-gray-500">
+                        If this problem persists, please check your permissions or contact support.
+                    </p>
                     <Button onClick={() => setErrorModal({ isOpen: false, message: '' })}>Close</Button>
                 </div>
             </Modal>

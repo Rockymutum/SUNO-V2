@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { TaskCard } from '@/components/TaskCard'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -14,6 +14,8 @@ export default function Discovery() {
     const { isSearchOpen, setIsSearchOpen } = useOutletContext() || { isSearchOpen: true, setIsSearchOpen: () => { } }
 
     const [searchTerm, setSearchTerm] = useState('')
+    const queryClient = useQueryClient()
+
     const { data: tasks = [], isLoading: loading } = useQuery({
         queryKey: ['tasks'],
         queryFn: async () => {
@@ -29,6 +31,30 @@ export default function Discovery() {
             return data
         }
     })
+
+    // Mutation for deleting tasks
+    const deleteMutation = useMutation({
+        mutationFn: async (taskId) => {
+            const { error } = await supabase
+                .from('tasks')
+                .delete()
+                .eq('id', taskId)
+
+            if (error) throw error
+            return taskId
+        },
+        onSuccess: (taskId) => {
+            // Invalidate and refetch tasks
+            queryClient.invalidateQueries({ queryKey: ['tasks'] })
+        },
+        onError: (error) => {
+            console.error('Failed to delete task:', error)
+        }
+    })
+
+    const handleDeleteTask = (taskId) => {
+        deleteMutation.mutate(taskId)
+    }
 
     // Search filter
     const filteredTasks = tasks.filter(task => {
@@ -115,7 +141,7 @@ export default function Discovery() {
                             >
                                 <TaskCard
                                     task={task}
-                                // onDelete logic would need mutation + invalidateQueries
+                                    onDelete={handleDeleteTask}
                                 />
                             </motion.div>
                         ))
