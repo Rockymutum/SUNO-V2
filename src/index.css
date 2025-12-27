@@ -16,7 +16,7 @@
   html,
   body,
   #root {
-    @apply bg-background text-primary font-sans antialiased selection:bg-accent/20;
+    @apply bg-background text-primary font-sans antialiased;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
     overscroll-behavior-y: none;
@@ -35,6 +35,32 @@
     inset: 0;
     padding-top: env(safe-area-inset-top);
     /* Push root content down if needed, but usually handled by children */
+  }
+
+  /* Text selection styling - subtle and non-intrusive */
+  ::selection {
+    background-color: rgba(59, 130, 246, 0.15);
+    color: inherit;
+  }
+
+  ::-moz-selection {
+    background-color: rgba(59, 130, 246, 0.15);
+    color: inherit;
+  }
+
+  /* Prevent iOS blue overlay on text selection */
+  * {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  /* But disable selection on interactive elements */
+  button,
+  a,
+  input[type="button"],
+  input[type="submit"] {
+    -webkit-user-select: none;
+    user-select: none;
   }
 }
 
