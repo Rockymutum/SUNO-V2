@@ -4,8 +4,14 @@ import { Button } from '@/components/ui/Button'
 
 export function OpenInAppBanner() {
     const [showBanner, setShowBanner] = useState(false)
+    const [isAndroid, setIsAndroid] = useState(false)
 
     useEffect(() => {
+        // Detect Android
+        const userAgent = navigator.userAgent.toLowerCase()
+        const androidDetected = /android/.test(userAgent)
+        setIsAndroid(androidDetected)
+
         // Check if running in standalone mode (PWA is installed)
         const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
             window.navigator.standalone || // iOS
@@ -17,13 +23,23 @@ export function OpenInAppBanner() {
         // Check if PWA is likely installed (has been visited before)
         const hasVisitedBefore = localStorage.getItem('pwa-visited')
 
-        // Show banner only if:
-        // 1. User is in browser (not PWA)
-        // 2. User has visited before (likely has PWA installed)
-        // 3. Banner hasn't been dismissed in this session
+        // Check if banner hasn't been dismissed in this session
         const bannerDismissed = sessionStorage.getItem('app-banner-dismissed')
 
-        if (isInBrowser && hasVisitedBefore && !bannerDismissed) {
+        // For Android: Try automatic redirect first
+        if (androidDetected && isInBrowser && hasVisitedBefore && !bannerDismissed) {
+            // Try to open in PWA automatically using Chrome's intent
+            tryOpenInPWA()
+
+            // If redirect fails, show banner after a short delay
+            setTimeout(() => {
+                // Check if still on page (redirect didn't work)
+                if (document.visibilityState === 'visible') {
+                    setShowBanner(true)
+                }
+            }, 1000)
+        } else if (isInBrowser && hasVisitedBefore && !bannerDismissed) {
+            // For iOS and other browsers, just show the banner
             setShowBanner(true)
         }
 
@@ -33,21 +49,28 @@ export function OpenInAppBanner() {
         }
     }, [])
 
+    const tryOpenInPWA = () => {
+        // For Android Chrome, use intent URL to open PWA
+        if (isAndroid) {
+            const currentPath = window.location.pathname + window.location.search + window.location.hash
+            const host = window.location.host
+
+            // Chrome intent URL - this will open the PWA if installed
+            const intentUrl = `intent://${host}${currentPath}#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;S.browser_fallback_url=${encodeURIComponent(window.location.href)};end`
+
+            // Try to redirect
+            window.location.href = intentUrl
+        }
+    }
+
     const handleOpenInApp = () => {
-        // Try to open in PWA
-        // For Android, this will trigger the app if installed
-        const currentUrl = window.location.href
-
-        // Android intent URL
-        const androidIntent = `intent://${window.location.host}${window.location.pathname}${window.location.search}#Intent;scheme=https;package=com.android.chrome;end`
-
-        // Try Android intent first
-        window.location.href = androidIntent
-
-        // Fallback: just reload (PWA should catch it if installed)
-        setTimeout(() => {
-            window.location.reload()
-        }, 500)
+        if (isAndroid) {
+            // For Android, try intent URL
+            tryOpenInPWA()
+        } else {
+            // For iOS and others, simple reload (browser will open PWA if installed)
+            window.location.href = window.location.href
+        }
     }
 
     const handleDismiss = () => {
