@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { supabase, uploadImage, deleteImage } from '@/lib/supabase'
+import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -12,6 +13,7 @@ import { motion } from 'framer-motion'
 export default function EditWorkerProfile() {
     const { user, profile, refreshProfile } = useAuth()
     const navigate = useNavigate()
+    const queryClient = useQueryClient()
     const [loading, setLoading] = useState(false)
 
     const [formData, setFormData] = useState({
@@ -102,9 +104,22 @@ export default function EditWorkerProfile() {
                 .map(skill => skill.trim())
                 .filter(skill => skill.length > 0)
 
-            // Delete removed photos
+            // Delete removed photos from storage
             if (deletedPhotos.length > 0) {
-                await Promise.all(deletedPhotos.map(url => deleteImage(url)))
+                console.log('Deleting photos from storage:', deletedPhotos)
+                const deleteResults = await Promise.all(
+                    deletedPhotos.map(async (url) => {
+                        try {
+                            await deleteImage(url)
+                            console.log('Successfully deleted:', url)
+                            return { url, success: true }
+                        } catch (error) {
+                            console.error('Failed to delete:', url, error)
+                            return { url, success: false, error }
+                        }
+                    })
+                )
+                console.log('Deletion results:', deleteResults)
             }
 
             const updates = {
@@ -124,6 +139,9 @@ export default function EditWorkerProfile() {
                 .eq('id', user.id)
 
             if (error) throw error
+
+            // Invalidate React Query cache for worker profile
+            await queryClient.invalidateQueries({ queryKey: ['workerProfile', user.id] })
 
             await refreshProfile() // Update global state
             navigate(-1)
