@@ -7,9 +7,10 @@ export function OpenInAppBanner() {
     const [isAndroid, setIsAndroid] = useState(false)
 
     useEffect(() => {
-        // Detect Android
+        // Detect platform
         const userAgent = navigator.userAgent.toLowerCase()
         const androidDetected = /android/.test(userAgent)
+        const iosDetected = /iphone|ipad|ipod/.test(userAgent)
         setIsAndroid(androidDetected)
 
         // Check if running in standalone mode (PWA is installed)
@@ -26,6 +27,8 @@ export function OpenInAppBanner() {
         // Check if banner hasn't been dismissed in this session
         const bannerDismissed = sessionStorage.getItem('app-banner-dismissed')
 
+        // For iOS: Don't show custom banner - it doesn't work on iOS
+        // iOS doesn't allow web pages to open PWAs programmatically
         // For Android: Try automatic redirect first
         if (androidDetected && isInBrowser && hasVisitedBefore && !bannerDismissed) {
             // Try to open in PWA automatically using Chrome's intent
@@ -38,8 +41,8 @@ export function OpenInAppBanner() {
                     setShowBanner(true)
                 }
             }, 1000)
-        } else if (isInBrowser && hasVisitedBefore && !bannerDismissed) {
-            // For iOS and other browsers, just show the banner
+        } else if (!iosDetected && isInBrowser && hasVisitedBefore && !bannerDismissed) {
+            // For other browsers (not iOS, not Android), show the banner
             setShowBanner(true)
         }
 
