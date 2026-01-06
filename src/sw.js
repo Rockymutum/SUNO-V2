@@ -15,44 +15,20 @@ self.addEventListener('push', (event) => {
     console.log('[SW] Push Received', event);
     let data = {}
     try {
-        if (event.data) {
-            // Case 1: Try JSON
-            try {
-                data = event.data.json()
-            } catch (e) {
-                // Case 2: Plain Text
-                console.warn('[SW] Payload is not JSON, treating as text.')
-                data = {
-                    title: 'Notification',
-                    body: event.data.text()
-                }
-            }
-        } else {
-            // Case 3: Empty/Null
-            console.warn('[SW] Push received with no payload.')
-            data = {
-                title: 'New Notification',
-                body: 'You have a new message'
-            }
-        }
-        console.log('[SW] Parsed Data:', data)
+        data = event.data ? event.data.json() : {}
+        console.log('[SW] Push Data:', data);
     } catch (e) {
-        console.error('[SW] Critical error parsing push data', e)
-        data = { title: 'Error', body: 'New notification available' }
+        console.error('[SW] Error parsing push data', e);
+        data = { title: 'New Notification', body: event.data ? event.data.text() : 'You have a new message' }
     }
 
     const title = data.title || 'SUNOMSI'
-
-    // Robust URL extraction: Handle flat structure or nested 'data' object (FCM style)
-    const payload = data.data || data
-    const targetUrl = payload.url || data.url || '/'
-
     const options = {
         body: data.body || 'New update available',
-        icon: '/logo.png',
+        icon: '/logo.png', // Fixed: pwa-192x192.png didn't exist
         badge: '/logo.png',
         data: {
-            url: targetUrl
+            url: data.url || '/'
         }
     }
 
