@@ -1,8 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
 import imageCompression from 'browser-image-compression'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co'
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder'
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Missing Supabase environment variables! Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.')
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
@@ -12,9 +16,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 const compressImage = async (file) => {
     try {
         const options = {
-            maxSizeMB: 0.2, // Max 200KB
-            maxWidthOrHeight: 1080, // Max dimension 1080px
-            useWebWorker: true // Use web worker for better performance
+            maxSizeMB: 1, // Aim for ~1MB
+            maxWidthOrHeight: 1920, // Max dimension 1920px (standard HD)
+            useWebWorker: true,
+            initialQuality: 0.8
         }
 
         console.log(`Original file size: ${(file.size / 1024 / 1024).toFixed(2)} MB`)
@@ -24,25 +29,36 @@ const compressImage = async (file) => {
         return compressedFile
     } catch (error) {
         console.error('Error compressing image:', error)
-        // If compression fails, return original file
+        // If compression fails, return original file to be checked for size later
         return file
     }
 }
 
-// Upload image to Supabase Storage
+// Upload image to Supabase Storage with "Safety Guard"
 export const uploadImage = async (file, bucket = 'task_photos') => {
     if (!file) return null
 
-    // Compress image before upload
-    const compressedFile = await compressImage(file)
+    // 1. Attempt Compression
+    // compressImage guarantees returning a File object (compressed or original)
+    const fileToUpload = await compressImage(file)
 
-    const fileExt = compressedFile.name.split('.').pop()
+    // 2. Final Hard Size Check - Zero Trust
+    const MAX_SIZE_MB = 5
+    const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024
+
+    if (fileToUpload.size > MAX_SIZE_BYTES) {
+        const sizeMB = (fileToUpload.size / 1024 / 1024).toFixed(2)
+        throw new Error(`File too large (${sizeMB} MB). Maximum allowed is ${MAX_SIZE_MB} MB.`)
+    }
+
+    // 3. Upload
+    const fileExt = fileToUpload.name.split('.').pop()
     const fileName = `${Math.random()}.${fileExt}`
     const filePath = `${fileName}`
 
     const { error: uploadError } = await supabase.storage
         .from(bucket)
-        .upload(filePath, compressedFile)
+        .upload(filePath, fileToUpload)
 
     if (uploadError) {
         throw uploadError

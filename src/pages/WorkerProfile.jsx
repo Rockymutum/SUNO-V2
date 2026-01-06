@@ -22,7 +22,7 @@ export default function WorkerProfile() {
         queryFn: async () => {
             // Fetch user profile and associated worker profile
             const { data: userData, error: userError } = await supabase
-                .from('users')
+                .from('public_profiles')
                 .select(`
                     *,
                     worker_profile:worker_profiles(*)

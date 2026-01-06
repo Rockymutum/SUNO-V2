@@ -28,7 +28,7 @@ export const AuthProvider = ({ children }) => {
         return () => subscription.unsubscribe()
     }, [])
 
-    const fetchProfile = async (userId) => {
+    const fetchProfile = async (userId, retryCount = 0) => {
         try {
             const { data, error } = await supabase
                 .from('users')
@@ -37,31 +37,7 @@ export const AuthProvider = ({ children }) => {
                 .single()
 
             if (error) {
-                if (error.code === 'PGRST116') {
-                    // Profile missing, try to auto-create from metadata (auto-heal)
-                    const { data: { user } } = await supabase.auth.getUser()
-                    if (user) {
-                        const updates = {
-                            id: user.id,
-                            email: user.email,
-                            display_name: user?.user_metadata?.full_name,
-                            avatar_url: user?.user_metadata?.avatar_url,
-                            updated_at: new Date()
-                        }
-                        const { data: newProfile, error: insertError } = await supabase
-                            .from('users')
-                            .upsert(updates)
-                            .select()
-                            .single()
-
-                        if (!insertError) {
-                            setProfile(newProfile)
-                            return
-                        }
-                    }
-                }
-
-                // Handle JWT expiry (auto-logout to prevent infinite loop)
+                // Handle Generic Errors (JWT expired, etc)
                 if (error.code === 'PGRST303' || error.message?.includes('JWT expired')) {
                     console.warn('Session expired, signing out...')
                     await supabase.auth.signOut()
@@ -71,9 +47,26 @@ export const AuthProvider = ({ children }) => {
                     return
                 }
 
-                console.error('Error fetching profile:', error)
+                // If Profile Not Found and we haven't exhausted retries
+                if (error.code === 'PGRST116') {
+                    if (retryCount < 3) {
+                        console.log(`Profile not found yet. Retrying in 1s... (${retryCount + 1}/3)`)
+                        setTimeout(() => {
+                            fetchProfile(userId, retryCount + 1)
+                        }, 1000)
+                        return
+                    } else {
+                        console.error('Profile Creation Failed: Server trigger did not create profile in time.')
+                        // Optional: Show a UI toast here
+                    }
+                } else {
+                    console.error('Error fetching profile:', error)
+                }
             }
-            setProfile(data)
+
+            if (data) {
+                setProfile(data)
+            }
         } catch (error) {
             console.error('Error in fetchProfile:', error)
         }
