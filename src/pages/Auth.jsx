@@ -119,7 +119,7 @@ export default function Auth() {
                 <div className="text-center space-y-2">
                     <h1 className="text-3xl font-bold tracking-tighter">SUNOMSI</h1>
                     <p className="text-muted text-sm tracking-wide uppercase">
-                        {mode === 'signin' ? 'Welcome Back' : 'Join the Network'}
+                        {mode === 'signin' ? 'Welcome' : 'Join the Network'}
                     </p>
                 </div>
 
