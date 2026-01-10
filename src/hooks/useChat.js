@@ -23,11 +23,12 @@ export function useChat() {
             // Map view results to expected shape (nested other_user object)
             const formatted = data.map(conv => ({
                 id: conv.conversation_id,
-                created_at: conv.last_message_at, // Approximate if needed, or add to view
+                created_at: conv.last_message_at,
                 last_message: conv.last_message,
                 last_message_at: conv.last_message_at,
                 participant_ids: conv.participant_ids,
                 unread_count_per_user: conv.unread_count_per_user,
+                cleared_history_at: conv.cleared_history_at, // Map this new field
                 other_user: {
                     id: conv.other_user_id,
                     display_name: conv.other_user_display_name || 'Unknown User',
@@ -46,11 +47,33 @@ export function useChat() {
 
     const fetchMessages = useCallback(async (conversationId) => {
         try {
-            const { data, error } = await supabase
+            // 1. Get current user
+            const { data: { user } } = await supabase.auth.getUser()
+
+            let clearedAt = null
+            if (user) {
+                // 2. Check clear history timestamp
+                const { data: conv } = await supabase
+                    .from('conversations')
+                    .select('cleared_history_at')
+                    .eq('id', conversationId)
+                    .single()
+
+                clearedAt = conv?.cleared_history_at?.[user.id]
+            }
+
+            // 3. Query messages
+            let query = supabase
                 .from('messages')
                 .select('*')
                 .eq('conversation_id', conversationId)
                 .order('created_at', { ascending: true })
+
+            if (clearedAt) {
+                query = query.gt('created_at', clearedAt)
+            }
+
+            const { data, error } = await query
 
             if (error) throw error
             return data
@@ -235,28 +258,18 @@ export function useChat() {
         }
     }, [queryClient])
 
-    // Delete entire conversation and all its messages
+    // Soft delete conversation for current user
     const deleteConversation = useCallback(async (conversationId) => {
         try {
-            // Delete all messages first
-            const { error: messagesError } = await supabase
-                .from('messages')
-                .delete()
-                .eq('conversation_id', conversationId)
+            const { error } = await supabase
+                .rpc('delete_conversation_for_user', {
+                    p_conversation_id: conversationId
+                })
 
-            if (messagesError) throw messagesError
-
-            // Delete the conversation
-            const { error: convError } = await supabase
-                .from('conversations')
-                .delete()
-                .eq('id', conversationId)
-
-            if (convError) throw convError
+            if (error) throw error
 
             // Invalidate queries
             await queryClient.invalidateQueries({ queryKey: ['conversations'] })
-            await queryClient.invalidateQueries({ queryKey: ['unread-messages-count'] })
             return true
         } catch (err) {
             console.error('Error deleting conversation:', err)
