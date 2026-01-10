@@ -51,14 +51,14 @@ export default function Chat() {
                 .from('conversations')
                 .select('participant_ids')
                 .eq('id', conversationId)
-                .single()
+                .maybeSingle()
             if (!convData) return null
             const otherUserId = convData.participant_ids.find(pid => pid !== user.id) || user.id
             const { data: userData } = await supabase
                 .from('public_user_details')
                 .select('display_name, avatar_url, last_seen')
                 .eq('id', otherUserId)
-                .single()
+                .maybeSingle()
             return userData
         },
         enabled: !!conversationId && !!user,

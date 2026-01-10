@@ -57,7 +57,7 @@ export function useChat() {
                     .from('conversations')
                     .select('cleared_history_at')
                     .eq('id', conversationId)
-                    .single()
+                    .maybeSingle()
 
                 clearedAt = conv?.cleared_history_at?.[user.id]
             }
@@ -148,7 +148,7 @@ export function useChat() {
                     unread_count_per_user: { [currentUserId]: 0, [otherUserId]: 0 }
                 })
                 .select()
-                .single()
+                .maybeSingle()
 
             if (error) throw error
             return newConvo.id
@@ -166,7 +166,7 @@ export function useChat() {
                 .from('conversations')
                 .select('unread_count_per_user')
                 .eq('id', conversationId)
-                .single()
+                .maybeSingle()
 
             if (convData) {
                 const currentCounts = convData.unread_count_per_user || {}
