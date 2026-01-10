@@ -16,13 +16,45 @@ export default function WorkerProfile() {
     const { user } = useAuth()
     const { getOrCreateConversation } = useChat()
     const [startingChat, setStartingChat] = useState(false)
+    const [revealedContact, setRevealedContact] = useState(null)
+    const [loadingContact, setLoadingContact] = useState(false)
+
+    const handleContactClick = async () => {
+        if (!user) {
+            navigate('/auth')
+            return
+        }
+        if (revealedContact) {
+            // Already revealed, perform action (call)
+            if (revealedContact.phone) window.location.href = `tel:${revealedContact.phone}`
+            return
+        }
+
+        setLoadingContact(true)
+        try {
+            const { data, error } = await supabase.rpc('get_worker_contact_info', { target_user_id: id })
+            if (error) throw error
+
+            if (data?.access) {
+                setRevealedContact(data)
+                if (data.phone) window.location.href = `tel:${data.phone}`
+            } else {
+                alert("Contact info is only available after booking this worker.")
+            }
+        } catch (err) {
+            console.error("Failed to fetch contact info:", err)
+            alert("Could not fetch contact info")
+        } finally {
+            setLoadingContact(false)
+        }
+    }
 
     const { data: profileData, isLoading: loading } = useQuery({
         queryKey: ['workerProfile', id],
         queryFn: async () => {
             // Fetch user profile and associated worker profile
             const { data: userData, error: userError } = await supabase
-                .from('users')
+                .from('public_user_details')
                 .select(`
                     *,
                     worker_profile:worker_profiles(*)
@@ -248,43 +280,51 @@ export default function WorkerProfile() {
 
             {/* Fixed Action Bar */}
             <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 px-6 pb-[calc(2rem+env(safe-area-inset-bottom))] flex gap-3 z-50 max-w-md mx-auto">
-                <Button
-                    className="flex-1 bg-black hover:bg-gray-800 text-white shadow-lg shadow-gray-200 h-12 text-base font-medium rounded-xl"
-                    disabled={startingChat}
-                    onClick={async () => {
-                        if (!user) {
-                            navigate('/auth')
-                            return
-                        }
-                        if (user.id === id) {
-                            alert("You cannot message yourself")
-                            return
-                        }
+                {/* Contact / Message Action Bar */}
+                <div className="flex gap-3 w-full">
+                    <Button
+                        className="flex-1 bg-black hover:bg-gray-800 text-white shadow-lg shadow-gray-200 h-12 text-base font-medium rounded-xl"
+                        disabled={startingChat}
+                        onClick={async () => {
+                            if (!user) {
+                                navigate('/auth')
+                                return
+                            }
+                            if (user.id === id) {
+                                alert("You cannot message yourself")
+                                return
+                            }
 
-                        setStartingChat(true)
-                        try {
-                            const convoId = await getOrCreateConversation(user.id, id)
-                            navigate(`/messages/${convoId}`)
-                        } catch (err) {
-                            alert("Failed to start chat")
-                        } finally {
-                            setStartingChat(false)
-                        }
-                    }}
-                >
-                    <MessageCircle size={20} className="mr-2" />
-                    {startingChat ? 'Connecting...' : 'Message'}
-                </Button>
+                            setStartingChat(true)
+                            try {
+                                const convoId = await getOrCreateConversation(user.id, id)
+                                navigate(`/messages/${convoId}`)
+                            } catch (err) {
+                                alert("Failed to start chat")
+                            } finally {
+                                setStartingChat(false)
+                            }
+                        }}
+                    >
+                        <MessageCircle size={20} className="mr-2" />
+                        {startingChat ? 'Connecting...' : 'Message'}
+                    </Button>
 
-                {phone !== 'Hidden' && (
                     <Button
                         variant="secondary"
-                        className="w-12 h-12 rounded-xl border border-gray-200 hover:bg-gray-50 flex items-center justify-center p-0"
-                        onClick={() => window.location.href = `tel:${phone}`}
+                        className={`w-12 h-12 rounded-xl border border-gray-200 flex items-center justify-center p-0 transition-all ${revealedContact ? 'bg-green-50 border-green-200 text-green-600' : 'hover:bg-gray-50'}`}
+                        onClick={handleContactClick}
+                        disabled={loadingContact}
                     >
-                        <Phone size={20} className="text-gray-700" />
+                        {loadingContact ? (
+                            <Loader2 size={20} className="animate-spin text-gray-400" />
+                        ) : revealedContact?.phone ? (
+                            <Phone size={20} className="fill-current" />
+                        ) : (
+                            <Phone size={20} className="text-gray-700" />
+                        )}
                     </Button>
-                )}
+                </div>
             </div>
 
             {/* Spacer for fixed bottom bar */}

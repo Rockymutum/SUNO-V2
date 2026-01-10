@@ -17,9 +17,9 @@ const compressImage = async (file) => {
             useWebWorker: true // Use web worker for better performance
         }
 
-        console.log(`Original file size: ${(file.size / 1024 / 1024).toFixed(2)} MB`)
+        // console.log(`Original file size: ...`)
         const compressedFile = await imageCompression(file, options)
-        console.log(`Compressed file size: ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`)
+        // console.log(`Compressed file size: ...`)
 
         return compressedFile
     } catch (error) {

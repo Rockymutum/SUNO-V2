@@ -17,7 +17,7 @@ export default function Workers() {
         queryFn: async () => {
             // Fetch users who are workers, plus their profile stats
             let query = supabase
-                .from('users')
+                .from('public_user_details')
                 .select(`
                     *,
                     worker_profile:worker_profiles(average_rating, reviews_count)

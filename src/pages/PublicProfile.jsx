@@ -16,8 +16,8 @@ export default function PublicProfile() {
             try {
                 // Fetch user profile
                 const { data: userData, error: userError } = await supabase
-                    .from('users')
-                    .select('display_name, avatar_url, bio, created_at, location, phone, hide_phone')
+                    .from('public_user_details')
+                    .select('*')
                     .eq('id', id)
                     .single()
 

@@ -67,7 +67,10 @@ export default function TaskCreate() {
         if (!validateStep2()) {
             return
         }
-        if (!user) return alert('You must be signed in to post a task')
+        if (!user) {
+            navigate('/auth')
+            return
+        }
         setLoading(true)
 
         try {

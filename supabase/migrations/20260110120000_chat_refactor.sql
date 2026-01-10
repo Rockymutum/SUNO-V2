@@ -30,8 +30,8 @@ BEGIN
     -- 1. Insert Message
     INSERT INTO public.messages (conversation_id, sender_id, body, read)
     VALUES (p_conversation_id, p_sender_id, p_body, false)
-    RETURNING id, created_at, conversation_id, sender_id, body, read, edited_at 
-    INTO v_message_id, v_message_created_at, v_msg_data;
+    RETURNING id, created_at 
+    INTO v_message_id, v_message_created_at;
     
     -- Format return data same as a select
     v_msg_data = jsonb_build_object(
@@ -73,11 +73,11 @@ BEGIN
 
     -- Increment for other user
     IF v_other_user_id IS NOT NULL THEN
-        -- coalesce to handle missing keys
-        v_new_counts := jsonb_set(
-            v_new_counts, 
-            array[v_other_user_id::text], 
-            to_jsonb(COALESCE((v_new_counts->>v_other_user_id::text)::int, 0) + 1)
+        -- Simplified update: Create a patch object and merge it using ||
+        -- This avoids 'jsonb_set' path complexity with UUID keys.
+        v_new_counts := v_new_counts || jsonb_build_object(
+            v_other_user_id::text, 
+            COALESCE((v_new_counts->>v_other_user_id::text)::int, 0) + 1
         );
     END IF;
 

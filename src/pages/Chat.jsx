@@ -55,7 +55,7 @@ export default function Chat() {
             if (!convData) return null
             const otherUserId = convData.participant_ids.find(pid => pid !== user.id) || user.id
             const { data: userData } = await supabase
-                .from('users')
+                .from('public_user_details')
                 .select('display_name, avatar_url, last_seen')
                 .eq('id', otherUserId)
                 .single()
@@ -153,7 +153,7 @@ export default function Chat() {
             )
             .subscribe((status) => {
                 if (status === 'SUBSCRIBED') {
-                    console.log('Connected to chat channel')
+                    // Connected
                 }
             })
 
