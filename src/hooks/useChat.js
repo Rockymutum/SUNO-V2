@@ -11,36 +11,32 @@ export function useChat() {
     const fetchConversations = useCallback(async (userId) => {
         if (!userId) return []
         try {
-            // We need to fetch conversations where the user is a participant
-            // And also join with the OTHER user's details.
-            // This is tricky with simple Supabase queries because participant_ids is an array.
-            // Ideally we use a View, but let's try a client-side join or specific RPC if needed.
-            // For now, simpler approach: Fetch convos, then fetch user details for the other ID.
-
+            // Task 2: Fix N+1 - Use the new View 'user_conversations'
             const { data, error } = await supabase
-                .from('conversations')
+                .from('user_conversations')
                 .select('*')
-                .contains('participant_ids', [userId])
+                .eq('user_id', userId)
                 .order('last_message_at', { ascending: false })
 
             if (error) throw error
 
-            // Enhance with other user's profile
-            const enhancedData = await Promise.all(data.map(async (conv) => {
-                const otherUserId = conv.participant_ids.find(id => id !== userId) || userId // Fallback to self if self-chat
-                const { data: userData } = await supabase
-                    .from('users')
-                    .select('display_name, avatar_url, last_seen')
-                    .eq('id', otherUserId)
-                    .single()
-
-                return {
-                    ...conv,
-                    other_user: userData || { display_name: 'Unknown User', avatar_url: null }
+            // Map view results to expected shape (nested other_user object)
+            const formatted = data.map(conv => ({
+                id: conv.conversation_id,
+                created_at: conv.last_message_at, // Approximate if needed, or add to view
+                last_message: conv.last_message,
+                last_message_at: conv.last_message_at,
+                participant_ids: conv.participant_ids,
+                unread_count_per_user: conv.unread_count_per_user,
+                other_user: {
+                    id: conv.other_user_id,
+                    display_name: conv.other_user_display_name || 'Unknown User',
+                    avatar_url: conv.other_user_avatar_url,
+                    last_seen: conv.other_user_last_seen
                 }
             }))
 
-            return enhancedData
+            return formatted
         } catch (err) {
             console.error('Error fetching conversations:', err)
             setError(err)
@@ -66,87 +62,21 @@ export function useChat() {
 
     const sendMessage = useCallback(async (conversationId, senderId, text) => {
         try {
-            // 1. Insert the message
-            const { data: messageData, error: messageError } = await supabase
-                .from('messages')
-                .insert({
-                    conversation_id: conversationId,
-                    sender_id: senderId,
-                    body: text,
-                    read: false
+            // Task 1: Atomic RPC Call
+            const { data: messageData, error } = await supabase
+                .rpc('send_message_atomic', {
+                    p_conversation_id: conversationId,
+                    p_sender_id: senderId,
+                    p_body: text
                 })
-                .select()
-                .single()
 
-            if (messageError) throw messageError
+            if (error) throw error
 
-            // 2. Fetch current conversation to get unread counts
-            // We need to do this to atomically-ish update the JSONB
-            const { data: convData, error: convError } = await supabase
-                .from('conversations')
-                .select('unread_count_per_user, participant_ids')
-                .eq('id', conversationId)
-                .single()
+            // Task 3: Security - Notification creation is now handled inside the RPC.
+            // We do not need to insert into 'notifications' from the client anymore.
 
-            if (convError) console.error('Error fetching conv for update:', convError)
-
-            const participants = convData?.participant_ids || []
-            const otherUserId = participants.find(id => id !== senderId)
-
-            // Calculate new counts
-            const currentCounts = convData?.unread_count_per_user || {}
-            const newCounts = { ...currentCounts }
-            if (otherUserId) {
-                newCounts[otherUserId] = (newCounts[otherUserId] || 0) + 1
-            }
-
-            // 3. Update conversation last_message AND unread counts
-            await supabase
-                .from('conversations')
-                .update({
-                    last_message: text,
-                    last_message_at: new Date(),
-                    unread_count_per_user: newCounts
-                })
-                .eq('id', conversationId)
-
-            // 4. Create Notification for the recipient
-            if (otherUserId) {
-                // Fetch sender name (optimization: could be passed in, but safe to fetch here)
-                const { data: senderProfile } = await supabase
-                    .from('users')
-                    .select('display_name')
-                    .eq('id', senderId)
-                    .single()
-
-                const senderName = senderProfile?.display_name || 'User'
-
-                const { data: notifData, error: notifError } = await supabase
-                    .from('notifications')
-                    .insert({
-                        user_id: otherUserId,
-                        title: `New message from ${senderName}`,
-                        body: text, // Truncate if too long? UI handles it.
-                        data: { url: `/messages/${conversationId}` },
-                        is_read: false
-                    })
-
-                // Trigger Push Notification directly (Client-side trigger)
-                // This ensures push works even if DB Webhook is missing
-                if (!notifError) {
-                    supabase.functions.invoke('push-notification', {
-                        body: {
-                            type: 'INSERT',
-                            record: {
-                                user_id: otherUserId,
-                                title: `New message from ${senderName}`,
-                                body: text,
-                                data: { url: `/messages/${conversationId}` }
-                            }
-                        }
-                    }).catch(console.error) // Fire and forget
-                }
-            }
+            // Note: The previous client-side push trigger is removed in favor of 
+            // Database-side logic or Database Webhooks listening to the 'notifications' insert.
 
             await queryClient.invalidateQueries({ queryKey: ['conversations'] })
 
@@ -156,7 +86,7 @@ export function useChat() {
             console.error('Error sending message:', err)
             throw err
         }
-    }, [])
+    }, [queryClient])
 
     const getOrCreateConversation = useCallback(async (currentUserId, otherUserId) => {
         try {
