@@ -84,12 +84,32 @@ export const AuthProvider = ({ children }) => {
         user,
         profile,
         loading,
-        signInWithGoogle: () => supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                redirectTo: window.location.origin
+        signInWithGoogle: async () => {
+            // Use environment variable if set, otherwise fallback to auto-detected origin
+            // This ensures it works on Vercel without needing hardcoded URLs, but allows overrides if needed
+            const redirectTo = import.meta.env.VITE_SITE_URL || window.location.origin
+
+            console.log('🔐 Google Auth: Starting sign in...')
+            console.log('📍 Google Auth: Using redirect URL:', redirectTo)
+
+            const { data, error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo,
+                    queryParams: {
+                        access_type: 'offline',
+                        prompt: 'consent',
+                    },
+                }
+            })
+
+            if (error) {
+                console.error('❌ Google Auth Error:', error.message)
+                throw error
             }
-        }),
+
+            return { data, error }
+        },
         signOut: () => supabase.auth.signOut(),
         refreshProfile: () => user ? fetchProfile(user.id) : Promise.resolve(),
     }

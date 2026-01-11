@@ -55,9 +55,9 @@ export default function Profile() {
         }
     }
 
-    const displayName = profile?.display_name || user?.user_metadata?.full_name || 'User'
+    const displayName = profile?.display_name || 'User'
     const email = user?.email
-    const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url
+    const avatarUrl = profile?.avatar_url
 
     const handleSignOut = async () => {
         await signOut()

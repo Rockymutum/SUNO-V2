@@ -231,6 +231,7 @@ export default function EditWorkerProfile() {
                     />
                 </div>
 
+                {/* Past Work Photos - Temporarily Hidden
                 <div className="space-y-3">
                     <label className="text-sm font-medium text-gray-700 block">Past Work Photos</label>
                     <div className="grid grid-cols-3 gap-2">
@@ -265,6 +266,7 @@ export default function EditWorkerProfile() {
                         </label>
                     </div>
                 </div>
+                */}
 
                 <Button onClick={handleSubmit} className="w-full h-12 text-base shadow-lg shadow-primary/20" disabled={loading}>
                     {loading ? <Loader2 className="animate-spin mr-2" /> : null}
