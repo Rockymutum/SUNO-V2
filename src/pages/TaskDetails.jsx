@@ -14,7 +14,7 @@ import { CATEGORIES } from '@/lib/constants'
 export default function TaskDetails() {
     const { id } = useParams()
     const navigate = useNavigate()
-    const { user, profile } = useAuth()
+    const { user, profile, loading: authLoading } = useAuth()
     const queryClient = useQueryClient()
 
     const [contactLoading, setContactLoading] = useState(false)
@@ -24,7 +24,7 @@ export default function TaskDetails() {
     const [infoModal, setInfoModal] = useState({ isOpen: false, title: '', message: '', type: 'success' }) // type: success | error
 
     // Fetch Task & Applications
-    const { data: { task, applications, creatorContact } = { task: null, applications: [], creatorContact: null }, isLoading: loading } = useQuery({
+    const { data: { task, applications, creatorContact } = { task: null, applications: [], creatorContact: null }, isLoading: taskLoading } = useQuery({
         queryKey: ['task', id],
         queryFn: async () => {
             // Task Details
@@ -53,7 +53,7 @@ export default function TaskDetails() {
 
             return { task: taskData, applications: appsData || [], creatorContact: taskData.creator }
         },
-        enabled: !!id
+        enabled: !!id && !authLoading
     })
 
     // Fetch Current Worker Wallet (if user is worker)
@@ -171,7 +171,7 @@ export default function TaskDetails() {
     }
 
 
-    if (loading) return <div className="h-[100dvh] flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>
+    if (authLoading || taskLoading) return <div className="h-[100dvh] flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>
     if (!task) return <div className="h-[100dvh] flex items-center justify-center">Task not found</div>
 
     // Creator data fallback
