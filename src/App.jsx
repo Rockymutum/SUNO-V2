@@ -19,6 +19,7 @@ import TaskCreate from './pages/TaskCreate'
 import TaskDetails from './pages/TaskDetails'
 import EditTask from './pages/EditTask'
 import PrivacySecurity from './pages/PrivacySecurity'
+import Wallet from './pages/Wallet'
 import Notifications from './pages/Notifications'
 import Auth from './pages/Auth'
 import Welcome from './pages/Welcome'
@@ -67,6 +68,7 @@ function App() {
                 <Route path="/worker/edit" element={<EditWorkerProfile />} />
                 <Route path="/profile/public/:id" element={<PublicProfile />} />
                 <Route path="/privacy" element={<PrivacySecurity />} />
+                <Route path="/wallet" element={<Wallet />} />
                 <Route path="/task/:id" element={<TaskDetails />} />
                 <Route path="/auth" element={<Auth />} />
               </Route>

@@ -6,7 +6,7 @@ import { Star, MapPin, Briefcase } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 export function WorkerCard({ worker }) {
-    const { id, name, title, rating, reviews_count, rate, location, avatar, skills = [] } = worker
+    const { id, name, title, rating, reviews_count, rate, location, avatar, skills = [], rate_unit = 'hour' } = worker
 
     return (
         <Card className="p-4 flex flex-col gap-3">
@@ -24,7 +24,7 @@ export function WorkerCard({ worker }) {
                     </div>
                 </div>
                 <div className="text-right">
-                    <p className="font-bold text-sm">₹{rate}/hr</p>
+                    <p className="font-bold text-sm">₹{rate}/{rate_unit === 'day' ? 'day' : 'hr'}</p>
                     <p className="text-[10px] text-muted">starting</p>
                 </div>
             </div>
@@ -41,7 +41,7 @@ export function WorkerCard({ worker }) {
             </div>
 
             <Link to={`/worker/${id}`} className="mt-1">
-                <Button variant="secondary" size="sm" className="w-full">View Profile</Button>
+                <Button className="w-full bg-primary text-white hover:bg-primary/90 border-0" size="sm">View Profile</Button>
             </Link>
         </Card>
     )

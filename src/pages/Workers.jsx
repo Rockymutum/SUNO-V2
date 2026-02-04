@@ -25,7 +25,7 @@ export default function Workers() {
                 .eq('is_worker', true)
                 .or('vacation_mode.is.null,vacation_mode.eq.false') // Filter out vacation mode (assume null/false is active)
 
-            if (category && category !== 'all') {
+            if (category && category !== 'all' && category !== 'others') {
                 query = query.eq('category', category)
             }
 
@@ -76,13 +76,13 @@ export default function Workers() {
                         <h2 className="text-xs font-bold uppercase tracking-wider text-muted">Categories</h2>
                         <Link to="/workers/all" className="text-xs text-primary font-medium flex items-center">View All <ArrowRight size={12} className="ml-1" /></Link>
                     </div>
-                    <div className="grid grid-cols-4 gap-3">
+                    <div className="grid grid-cols-4 gap-4 px-2">
                         {CATEGORIES.map(cat => (
-                            <Link key={cat.id} to={`/workers/${cat.id}`} className="flex flex-col items-center gap-2">
-                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${cat.color} mb-1`}>
-                                    <cat.icon size={24} />
+                            <Link key={cat.id} to={`/workers/${cat.id}`} className="flex flex-col items-center gap-2 group">
+                                <div className={`w-16 h-16 rounded-[1.5rem] bg-white border border-gray-100 shadow-sm flex items-center justify-center ${cat.color} group-hover:scale-105 group-active:scale-95 transition-all duration-300 group-hover:shadow-md ring-1 ring-black/5`}>
+                                    <cat.icon size={22} strokeWidth={2.5} />
                                 </div>
-                                <span className="text-[10px] font-bold text-center leading-tight">{cat.name}</span>
+                                <span className="text-[11px] font-medium text-gray-600 text-center leading-tight tracking-tight group-hover:text-black transition-colors">{cat.name}</span>
                             </Link>
                         ))}
                     </div>
@@ -91,7 +91,7 @@ export default function Workers() {
 
             <section>
                 <h2 className="text-xs font-bold uppercase tracking-wider text-muted mb-3 px-1">
-                    {category && category !== 'all' ? `${category.charAt(0).toUpperCase() + category.slice(1).replace('_', ' ')} Professionals` : 'Top Rated Workers'}
+                    {category && category !== 'all' ? (category === 'others' ? 'All Workers' : `${category.charAt(0).toUpperCase() + category.slice(1).replace('_', ' ')} Professionals`) : 'Top Rated Workers'}
                 </h2>
 
                 {loading ? (
@@ -109,6 +109,7 @@ export default function Workers() {
                                 rating: worker.worker_profile?.average_rating || 0,
                                 reviews_count: worker.worker_profile?.reviews_count || 0,
                                 rate: worker.hourly_rate || 0,
+                                rate_unit: worker.rate_unit || 'hour',
                                 location: worker.location || 'Remote',
                                 avatar: worker.avatar_url,
                                 skills: worker.skills || []

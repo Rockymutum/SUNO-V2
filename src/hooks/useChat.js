@@ -140,11 +140,18 @@ export function useChat() {
             if (match) return match.id
 
             // 2. Create new if not found
+
+            // STRICT MODE: Only allow conversations with Support
+            const { SUPPORT_USER_ID } = await import('@/lib/constants')
+            if (otherUserId !== SUPPORT_USER_ID) {
+                throw new Error("Direct messaging is disabled. You can only contact Customer Support.")
+            }
+
             const { data: newConvo, error } = await supabase
                 .from('conversations')
                 .insert({
                     participant_ids: [currentUserId, otherUserId],
-                    last_message: 'Started a new conversation',
+                    last_message: null,
                     unread_count_per_user: { [currentUserId]: 0, [otherUserId]: 0 }
                 })
                 .select()

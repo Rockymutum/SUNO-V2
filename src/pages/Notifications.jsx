@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/Button'
-import { ChevronLeft, Trash2, Bell, CheckCircle2, MessageSquare, Heart, Star, MessageCircle, CheckCircle } from 'lucide-react'
+import { ChevronLeft, Trash2, Bell, CheckCircle2, MessageSquare, Heart, Star, MessageCircle, CheckCircle, Briefcase, Calendar } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { motion, AnimatePresence } from 'framer-motion'
 import { NotificationPermissionModal } from '@/components/NotificationPermissionModal'
@@ -106,6 +106,16 @@ export default function Notifications() {
         const title = notification.title.toLowerCase()
         const body = notification.body.toLowerCase()
 
+        // Distinguish between REQUEST and ACCEPTED
+        if (title.includes('request')) {
+            return { Icon: Briefcase, color: 'bg-amber-100 text-amber-600' } // Critical Request
+        }
+        if (title.includes('accepted')) {
+            return { Icon: CheckCircle2, color: 'bg-teal-100 text-teal-600' } // Ambient Acceptance
+        }
+        if (title.includes('booking')) {
+            return { Icon: Briefcase, color: 'bg-blue-100 text-blue-600' } // Generic
+        }
         if (title.includes('message') || body.includes('message')) {
             return { Icon: MessageSquare, color: 'bg-blue-100 text-blue-600' }
         }
@@ -118,7 +128,7 @@ export default function Notifications() {
         if (title.includes('review')) {
             return { Icon: Star, color: 'bg-yellow-100 text-yellow-600' }
         }
-        if (title.includes('offer') || title.includes('accepted') || title.includes('completed')) {
+        if (title.includes('offer') || title.includes('completed')) {
             return { Icon: CheckCircle, color: 'bg-green-100 text-green-600' }
         }
         return { Icon: Bell, color: 'bg-slate-100 text-slate-600' }
@@ -151,11 +161,11 @@ export default function Notifications() {
             </div>
 
             {/* List */}
-            <div className="pt-16 space-y-1">
+            <div className="pt-16 space-y-1 px-2">
                 {needRefresh && (
                     <div
                         onClick={() => updateServiceWorker(true)}
-                        className="mb-4 bg-black text-white p-4 rounded-2xl flex items-center gap-4 cursor-pointer hover:bg-gray-900 transition-all shadow-xl shadow-black/20"
+                        className="mb-4 bg-black text-white p-4 rounded-2xl flex items-center gap-4 cursor-pointer hover:bg-gray-900 transition-all shadow-xl shadow-black/20 mx-2"
                     >
                         <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center animate-pulse">
                             <Download size={20} className="text-white" />
@@ -172,7 +182,7 @@ export default function Notifications() {
 
                     <div
                         onClick={() => setShowPushModal(true)}
-                        className="mb-6 bg-primary/5 border border-primary/10 p-4 rounded-2xl flex items-center gap-4 cursor-pointer hover:bg-primary/10 transition-colors"
+                        className="mb-6 bg-primary/5 border border-primary/10 p-4 rounded-2xl flex items-center gap-4 cursor-pointer hover:bg-primary/10 transition-colors mx-2"
                     >
                         <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-primary">
                             <Bell size={20} />
@@ -187,7 +197,7 @@ export default function Notifications() {
 
                 {/* DEBUG: Test Push Button */}
                 {isSubscribed && user && (
-                    <div className="mb-4 flex flex-col gap-2 justify-center">
+                    <div className="mb-4 flex flex-col gap-2 justify-center mx-2">
                         <Button
                             variant="outline"
                             size="sm"
@@ -247,13 +257,13 @@ export default function Notifications() {
                 )}
 
                 {isLoading ? (
-                    <div className="space-y-4 pt-4">
+                    <div className="space-y-4 pt-4 px-2">
                         {[1, 2, 3].map(i => (
                             <div key={i} className="h-20 bg-slate-50 rounded-2xl animate-pulse" />
                         ))}
                     </div>
                 ) : notifications.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+                    <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 px-2">
                         <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-300">
                             <Bell size={32} />
                         </div>
@@ -266,6 +276,13 @@ export default function Notifications() {
                     <AnimatePresence initial={false}>
                         {notifications.map((n) => {
                             const { Icon, color } = getNotificationIcon(n)
+
+                            // 1. Critical Booking REQUEST (Worker Side)
+                            const isBookingRequest = n.title.toLowerCase().includes('booking') && n.title.toLowerCase().includes('request')
+
+                            // 2. Ambient Booking ACCEPTED (Customer Side)
+                            const isBookingAccepted = n.title.toLowerCase().includes('accepted') && n.title.toLowerCase().includes('booking')
+
                             return (
                                 <motion.div
                                     key={n.id}
@@ -274,23 +291,47 @@ export default function Notifications() {
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                                     onClick={() => handleNotificationClick(n)}
-                                    className={`relative group p-4 border-b transition-all cursor-pointer active:scale-[0.99] touch-manipulation
-                                        ${n.is_read ? 'bg-white border-slate-100' : 'bg-blue-50/30 border-blue-100'}
-                                        hover:bg-slate-50
+                                    // STYLE LOGIC
+                                    className={`relative group p-4 transition-all cursor-pointer active:scale-[0.99] touch-manipulation
+                                        ${isBookingRequest
+                                            ? 'bg-amber-50/90 border border-amber-200 shadow-sm rounded-2xl my-3 mx-1 !p-5'
+                                            : isBookingAccepted
+                                                ? 'bg-teal-50/60 border border-teal-100 shadow-sm rounded-2xl my-3 mx-1 !p-5'
+                                                : `border-b ${n.is_read ? 'bg-white border-slate-100' : 'bg-blue-50/30 border-blue-100'} hover:bg-slate-50 rounded-none`
+                                        }
                                     `}
                                 >
                                     <div className="flex gap-4">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${color}`}>
-                                            <Icon size={18} />
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 
+                                            ${isBookingRequest
+                                                ? 'bg-amber-100 text-amber-600 ring-4 ring-amber-50 shadow-sm'
+                                                : isBookingAccepted
+                                                    ? 'bg-teal-100 text-teal-600 ring-4 ring-teal-50 shadow-sm'
+                                                    : color}
+                                        `}>
+                                            <Icon size={(isBookingRequest || isBookingAccepted) ? 20 : 18} />
                                         </div>
-                                        <div className="flex-1 min-w-0 pr-12">
-                                            <h3 className={`font-semibold text-sm truncate ${!n.is_read && 'text-primary'}`}>
-                                                {n.title}
-                                            </h3>
-                                            <p className="text-xs text-gray-600 mt-0.5 line-clamp-2 leading-relaxed">
+                                        <div className="flex-1 min-w-0 pr-8">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <h3 className={`text-sm truncate ${!n.is_read && 'text-primary'} ${(isBookingRequest || isBookingAccepted) ? '!text-slate-900 font-bold text-base' : 'font-semibold'}`}>
+                                                    {n.title}
+                                                </h3>
+                                                {/* BADGES */}
+                                                {isBookingRequest && (
+                                                    <span className="text-[10px] font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
+                                                        Critical
+                                                    </span>
+                                                )}
+                                                {isBookingAccepted && (
+                                                    <span className="text-[10px] font-bold bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                                        Confirmed
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className={`text-xs mt-0.5 line-clamp-2 leading-relaxed ${(isBookingRequest || isBookingAccepted) ? 'text-slate-700 font-medium' : 'text-gray-600'}`}>
                                                 {n.body}
                                             </p>
-                                            <span className="text-[10px] text-gray-400 mt-1 block">
+                                            <span className={`text-[10px] mt-2 block ${(isBookingRequest || isBookingAccepted) ? 'text-slate-400 font-semibold' : 'text-gray-400'}`}>
                                                 {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
                                             </span>
                                         </div>
@@ -299,7 +340,7 @@ export default function Notifications() {
                                     {/* Delete Button */}
                                     <button
                                         onClick={(e) => handleDelete(e, n.id)}
-                                        className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                        className="absolute right-3 top-3 p-2 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
                                     >
                                         <Trash2 size={16} />
                                     </button>

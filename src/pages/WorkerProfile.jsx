@@ -1,53 +1,33 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { Star, MapPin, MessageCircle, Phone, Globe, Loader2, Briefcase, ChevronLeft, User } from 'lucide-react'
+import { Star, MapPin, Globe, Loader2, ChevronLeft, CalendarClock, CreditCard, X, AlertTriangle } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
-import { useChat } from '@/hooks/useChat'
+import { Modal } from '@/components/ui/Modal'
 
 export default function WorkerProfile() {
     const { id } = useParams()
     const navigate = useNavigate()
+    const routeLocation = useLocation()
     const { user } = useAuth()
-    const { getOrCreateConversation } = useChat()
-    const [startingChat, setStartingChat] = useState(false)
-    const [revealedContact, setRevealedContact] = useState(null)
-    const [loadingContact, setLoadingContact] = useState(false)
 
-    const handleContactClick = async () => {
-        if (!user) {
-            navigate('/auth')
-            return
-        }
-        if (revealedContact) {
-            // Already revealed, perform action (call)
-            if (revealedContact.phone) window.location.href = `tel:${revealedContact.phone}`
-            return
-        }
+    // Booking State
+    const [isBookingModalOpen, setIsBookingModalOpen] = useState(false)
+    const [bookingLoading, setBookingLoading] = useState(false)
+    const [bookingSuccess, setBookingSuccess] = useState(false)
 
-        setLoadingContact(true)
-        try {
-            const { data, error } = await supabase.rpc('get_worker_contact_info', { target_user_id: id })
-            if (error) throw error
-
-            if (data?.access) {
-                setRevealedContact(data)
-                if (data.phone) window.location.href = `tel:${data.phone}`
-            } else {
-                alert("Contact info is only available after booking this worker.")
-            }
-        } catch (err) {
-            console.error("Failed to fetch contact info:", err)
-            alert("Could not fetch contact info")
-        } finally {
-            setLoadingContact(false)
-        }
-    }
+    // Form State
+    const [bookingForm, setBookingForm] = useState({
+        title: '',
+        description: '',
+        budget: '',
+        date: ''
+    })
 
     const { data: profileData, isLoading: loading } = useQuery({
         queryKey: ['workerProfile', id],
@@ -64,7 +44,7 @@ export default function WorkerProfile() {
 
             if (userError) throw userError
 
-            // Fetch job count (tasks created by this user as a poster)
+            // Fetch job count
             const { count: tasksPosted } = await supabase
                 .from('tasks')
                 .select('*', { count: 'exact', head: true })
@@ -83,20 +63,104 @@ export default function WorkerProfile() {
                 .eq('worker_id', id)
                 .order('created_at', { ascending: false })
 
+            // Check if worker is currently busy (active job)
+            const { data: activeJobsData } = await supabase
+                .from('applications')
+                .select('id, task:tasks!inner(id, title, status)')
+                .eq('worker_id', id)
+                .eq('status', 'accepted')
+                .eq('task.status', 'in_progress')
+
+            const activeJobsCount = activeJobsData?.length || 0
+
             return {
                 profile: userData,
                 stats: {
                     jobsPosted: tasksPosted || 0,
                     jobsDone: userData.worker_profile?.completed_jobs_count || 0,
                     rating: userData.worker_profile?.average_rating || 0,
-                    reviews: userData.worker_profile?.reviews_count || 0
+                    reviews: userData.worker_profile?.reviews_count || 0,
+                    activeJobs: activeJobsCount || 0,
+                    activeJobsData: activeJobsData || []
                 },
                 reviews: reviewsData || []
             }
         },
-        enabled: !!id,
-        staleTime: 1000 * 60 * 5 // 5 minutes cache
+        enabled: !!id
     })
+
+    const handleBookClick = () => {
+        if (!user) {
+            navigate('/auth')
+            return
+        }
+        if (user.id === id) {
+            alert("You cannot book yourself.")
+            return
+        }
+        setIsBookingModalOpen(true)
+    }
+
+    const handleBookingSubmit = async (e) => {
+        e.preventDefault()
+        if (!bookingForm.title || !bookingForm.budget) return
+
+        setBookingLoading(true)
+        try {
+            // 1. Create Task (Targeted)
+            const { data: taskData, error: taskError } = await supabase
+                .from('tasks')
+                .insert({
+                    created_by: user.id,
+                    title: bookingForm.title,
+                    description: bookingForm.description,
+                    budget_min: parseFloat(bookingForm.budget),
+                    budget_max: parseFloat(bookingForm.budget), // Fixed price for direct booking
+                    location: profileData?.profile?.location || 'Remote', // Default or user input
+                    target_worker_id: id,
+                    status: 'open',
+                    created_at: new Date()
+                })
+                .select()
+                .single()
+
+            if (taskError) throw taskError
+
+            // 2. Notify Worker
+            const { error: notifError } = await supabase
+                .from('notifications')
+                .insert({
+                    user_id: id,
+                    title: 'New Booking Request! 📅',
+                    body: `${user.user_metadata?.full_name || 'A user'} wants to book you for "${bookingForm.title}" (₹${bookingForm.budget}).`,
+                    data: { url: `/task/${taskData.id}` },
+                    is_read: false
+                })
+
+            // Push Notification (Optional hook)
+            supabase.functions.invoke('push-notification', {
+                body: {
+                    type: 'INSERT',
+                    record: {
+                        user_id: id,
+                        title: 'New Booking Request! 📅',
+                        body: `New booking request: ${bookingForm.title}`,
+                        data: { url: `/task/${taskData.id}` }
+                    }
+                }
+            }).catch(console.error)
+
+            setBookingSuccess(true)
+            setIsBookingModalOpen(false)
+            setBookingForm({ title: '', description: '', budget: '', date: '' })
+
+        } catch (error) {
+            console.error("Booking failed:", error)
+            alert("Failed to send booking request. Please try again.")
+        } finally {
+            setBookingLoading(false)
+        }
+    }
 
     const profile = profileData?.profile
     const stats = profileData?.stats || { jobs: 0, rating: 0 }
@@ -105,11 +169,9 @@ export default function WorkerProfile() {
     if (loading) return <div className="h-[100dvh] flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>
     if (!profile) return <div className="h-[100dvh] flex items-center justify-center">User not found</div>
 
-    // Fallback data if fields are missing in schema
     const jobTitle = profile.job_title || 'Community Member'
-    const bio = profile.bio || `Hi, I'm ${profile.display_name}. I'm an active member of this community.`
+    const bio = profile.bio || `Hi, I'm ${profile.display_name}.`
     const location = profile.location || 'Local'
-    const phone = (profile.hide_phone ? null : profile.phone) || 'Hidden'
 
     return (
         <div className="bg-gray-50/50 min-h-[100dvh] pb-safe">
@@ -139,6 +201,12 @@ export default function WorkerProfile() {
                             <Star size={10} className="fill-yellow-400 text-yellow-400" />
                             {stats.rating > 0 ? stats.rating : 'New'}
                         </div>
+                        {stats.activeJobs > 0 && (
+                            <div className="absolute -bottom-2 -left-2 bg-red-50 text-red-600 shadow-sm text-[10px] font-bold px-2 py-1 rounded-full border border-red-100 flex items-center gap-1">
+                                <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                                Busy
+                            </div>
+                        )}
                     </div>
 
                     <div>
@@ -167,7 +235,7 @@ export default function WorkerProfile() {
                     {profile.hourly_rate && (
                         <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center">
                             <span className="text-gray-400 mb-1"><Globe size={18} /></span>
-                            <span className="font-bold text-gray-900">₹{profile.hourly_rate}<span className="text-xs font-normal text-gray-400">/hr</span></span>
+                            <span className="font-bold text-gray-900">₹{profile.hourly_rate}<span className="text-xs font-normal text-gray-400">/{profile.rate_unit === 'day' ? 'day' : 'hr'}</span></span>
                             <span className="text-[10px] text-gray-400 uppercase tracking-wider mt-1">Rate</span>
                         </div>
                     )}
@@ -272,63 +340,92 @@ export default function WorkerProfile() {
                         </div>
                     ) : (
                         <div className="text-center py-8 bg-white rounded-xl border border-dashed border-gray-200">
-                            <p className="text-gray-400 text-sm">No reviews yet.</p>
+                            <p className="text-gray-400 text-sm">No reviews yet. Be the first!</p>
                         </div>
                     )}
                 </section>
             </div>
 
-            {/* Fixed Action Bar */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 px-6 pb-[calc(2rem+env(safe-area-inset-bottom))] flex gap-3 z-50 max-w-md mx-auto">
-                {/* Contact / Message Action Bar */}
-                <div className="flex gap-3 w-full">
+            {/* Fixed Action Bar - Hidden if navigating from Booked Task */}
+            {new URLSearchParams(routeLocation.search).get('hide_book') !== 'true' && (
+                <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 px-6 pb-[calc(2rem+env(safe-area-inset-bottom))] flex gap-3 z-50 max-w-md mx-auto">
                     <Button
-                        className="flex-1 bg-black hover:bg-gray-800 text-white shadow-lg shadow-gray-200 h-12 text-base font-medium rounded-xl"
-                        disabled={startingChat}
-                        onClick={async () => {
-                            if (!user) {
-                                navigate('/auth')
-                                return
-                            }
-                            if (user.id === id) {
-                                alert("You cannot message yourself")
-                                return
-                            }
-
-                            setStartingChat(true)
-                            try {
-                                const convoId = await getOrCreateConversation(user.id, id)
-                                navigate(`/messages/${convoId}`)
-                            } catch (err) {
-                                alert("Failed to start chat")
-                            } finally {
-                                setStartingChat(false)
-                            }
-                        }}
+                        className={`w-full h-14 text-base font-bold shadow-xl shadow-gray-200 rounded-2xl flex items-center justify-center gap-2 ${stats.activeJobs > 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none' : 'bg-primary text-white hover:bg-primary/90'}`}
+                        onClick={stats.activeJobs > 0 ? undefined : handleBookClick}
+                        disabled={stats.activeJobs > 0}
                     >
-                        <MessageCircle size={20} className="mr-2" />
-                        {startingChat ? 'Connecting...' : 'Message'}
-                    </Button>
-
-                    <Button
-                        variant="secondary"
-                        className={`w-12 h-12 rounded-xl border border-gray-200 flex items-center justify-center p-0 transition-all ${revealedContact ? 'bg-green-50 border-green-200 text-green-600' : 'hover:bg-gray-50'}`}
-                        onClick={handleContactClick}
-                        disabled={loadingContact}
-                    >
-                        {loadingContact ? (
-                            <Loader2 size={20} className="animate-spin text-gray-400" />
-                        ) : revealedContact?.phone ? (
-                            <Phone size={20} className="fill-current" />
-                        ) : (
-                            <Phone size={20} className="text-gray-700" />
-                        )}
+                        {stats.activeJobs > 0 ? <Loader2 className="animate-spin" /> : <CalendarClock />}
+                        {stats.activeJobs > 0
+                            ? `Busy: ${stats.activeJobsData?.[0]?.task?.title?.slice(0, 15)}${stats.activeJobsData?.[0]?.task?.title?.length > 15 ? '...' : ''}`
+                            : "Book Now"}
                     </Button>
                 </div>
-            </div>
+            )}
 
-            {/* Spacer for fixed bottom bar */}
             <div className="h-24" />
+
+            {/* Booking Modal */}
+            <Modal isOpen={isBookingModalOpen} onClose={() => setIsBookingModalOpen(false)} title="Book Worker">
+                <form onSubmit={handleBookingSubmit} className="space-y-4 pt-2">
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1.5">Task Title</label>
+                        <input
+                            required
+                            type="text"
+                            placeholder="e.g. Broken Tap Repair"
+                            className="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-black transition-all outline-none font-medium"
+                            value={bookingForm.title}
+                            onChange={(e) => setBookingForm({ ...bookingForm, title: e.target.value })}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1.5">Description</label>
+                        <textarea
+                            placeholder="Describe what needs to be done..."
+                            className="w-full p-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-black transition-all outline-none resize-none h-24 font-medium"
+                            value={bookingForm.description}
+                            onChange={(e) => setBookingForm({ ...bookingForm, description: e.target.value })}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1.5">Your Budget (₹)</label>
+                        <div className="relative">
+                            <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                            <input
+                                required
+                                type="number"
+                                placeholder="500"
+                                className="w-full p-3 pl-10 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-black transition-all outline-none font-medium"
+                                value={bookingForm.budget}
+                                onChange={(e) => setBookingForm({ ...bookingForm, budget: e.target.value })}
+                            />
+                        </div>
+                    </div>
+
+                    <Button className="w-full h-12 mt-4 text-base" disabled={bookingLoading}>
+                        {bookingLoading ? <Loader2 className="animate-spin" /> : "Send Booking Request"}
+                    </Button>
+                </form>
+            </Modal>
+
+            {/* Success Modal */}
+            <Modal isOpen={bookingSuccess} onClose={() => setBookingSuccess(false)} title="Request Sent! 🎉">
+                <div className="text-center space-y-4">
+                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto text-green-600">
+                        <CalendarClock size={32} />
+                    </div>
+                    <p className="text-gray-600">
+                        Your booking request has been sent to <strong>{profile.display_name}</strong>.
+                        They will review it and accept shortly.
+                    </p>
+                    <Button onClick={() => setBookingSuccess(false)} className="w-full">
+                        Done
+                    </Button>
+                </div>
+            </Modal>
+
         </div>
     )
 }

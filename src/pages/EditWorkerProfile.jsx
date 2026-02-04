@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { supabase, uploadImage, deleteImage } from '@/lib/supabase'
+import { CATEGORIES } from '@/lib/constants'
 import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
-import { ChevronLeft, Briefcase, MapPin, DollarSign, Wrench, Loader2, Image as ImageIcon, X } from 'lucide-react'
+import { ChevronLeft, Briefcase, MapPin, DollarSign, Wrench, Loader2, Image as ImageIcon, X, Plus } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 export default function EditWorkerProfile() {
@@ -19,28 +20,15 @@ export default function EditWorkerProfile() {
     const [formData, setFormData] = useState({
         job_title: '',
         hourly_rate: '',
-        skills: '',
+        rate_unit: 'hour',
+        skills: [],
         location: '',
         category: '',
         bio: '',
         portfolio_photos: []
     })
 
-    const CATEGORIES = [
-        { id: 'plumbing', name: 'Plumbing' },
-        { id: 'electrical', name: 'Electrical' },
-        { id: 'moving', name: 'Moving' },
-        { id: 'painting', name: 'Painting' },
-        { id: 'cleaning', name: 'Cleaning' },
-        { id: 'carpentry', name: 'Carpentry' },
-        { id: 'caretaker', name: 'Caretaker' },
-        { id: 'driver', name: 'Driver' },
-        { id: 'cook', name: 'Cook' },
-        { id: 'gardener', name: 'Gardener' },
-        { id: 'developer', name: 'Developer' },
-        { id: 'pest_control', name: 'Pest Control' },
-        { id: 'others', name: 'Others' }
-    ]
+    const [currentSkill, setCurrentSkill] = useState('')
 
     const [uploading, setUploading] = useState(false)
     const [deletedPhotos, setDeletedPhotos] = useState([])
@@ -50,7 +38,8 @@ export default function EditWorkerProfile() {
             setFormData({
                 job_title: profile.job_title || '',
                 hourly_rate: profile.hourly_rate || '',
-                skills: profile.skills ? profile.skills.join(', ') : '',
+                rate_unit: profile.rate_unit || 'hour',
+                skills: profile.skills || [],
                 location: profile.location || '',
                 category: profile.category || '',
                 bio: profile.bio || '',
@@ -61,6 +50,22 @@ export default function EditWorkerProfile() {
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value })
+    }
+
+    const handleAddSkill = () => {
+        if (!currentSkill.trim()) return
+        setFormData(prev => ({
+            ...prev,
+            skills: [...prev.skills, currentSkill.trim()]
+        }))
+        setCurrentSkill('')
+    }
+
+    const handleRemoveSkill = (indexToRemove) => {
+        setFormData(prev => ({
+            ...prev,
+            skills: prev.skills.filter((_, index) => index !== indexToRemove)
+        }))
     }
 
     const handlePhotoUpload = async (e) => {
@@ -97,13 +102,14 @@ export default function EditWorkerProfile() {
     const handleSubmit = async () => {
         setLoading(true)
 
-        try {
-            // Convert comma-separated skills string to array
-            const skillsArray = formData.skills
-                .split(',')
-                .map(skill => skill.trim())
-                .filter(skill => skill.length > 0)
+        // Validation
+        if (!formData.job_title || !formData.hourly_rate || !formData.rate_unit || !formData.category || !formData.location || !formData.bio || formData.skills.length === 0) {
+            alert('Please fill in all required fields (marked with *).')
+            setLoading(false)
+            return
+        }
 
+        try {
             // Delete removed photos from storage
             if (deletedPhotos.length > 0) {
                 console.log('Deleting photos from storage:', deletedPhotos)
@@ -125,7 +131,8 @@ export default function EditWorkerProfile() {
             const updates = {
                 job_title: formData.job_title,
                 hourly_rate: formData.hourly_rate ? parseFloat(formData.hourly_rate) : null,
-                skills: skillsArray,
+                rate_unit: formData.rate_unit,
+                skills: formData.skills,
                 location: formData.location,
                 category: formData.category,
                 bio: formData.bio,
@@ -142,6 +149,9 @@ export default function EditWorkerProfile() {
 
             // Invalidate React Query cache for worker profile
             await queryClient.invalidateQueries({ queryKey: ['workerProfile', user.id] })
+
+            // Also invalidate the main worker list so updates (title/rating/etc) show up immediately
+            await queryClient.invalidateQueries({ queryKey: ['workers'] })
 
             await refreshProfile() // Update global state
             navigate(-1)
@@ -176,7 +186,7 @@ export default function EditWorkerProfile() {
                 {/* Form Fields */}
                 <div className="space-y-5">
                     <Input
-                        label="Job Title"
+                        label="Job Title *"
                         name="job_title"
                         value={formData.job_title}
                         onChange={handleChange}
@@ -184,18 +194,31 @@ export default function EditWorkerProfile() {
                         icon={<Briefcase size={18} />}
                     />
 
-                    <Input
-                        label="Hourly Rate (₹)"
-                        name="hourly_rate"
-                        type="number"
-                        value={formData.hourly_rate}
-                        onChange={handleChange}
-                        placeholder="e.g. 500"
-                        icon={<DollarSign size={18} />}
-                    />
+                    <div className="grid grid-cols-2 gap-4">
+                        <Input
+                            label="Rate (₹) *"
+                            name="hourly_rate"
+                            type="number"
+                            value={formData.hourly_rate}
+                            onChange={handleChange}
+                            placeholder="e.g. 500"
+                            icon={<DollarSign size={18} />}
+                        />
+                        <Select
+                            label="Unit *"
+                            name="rate_unit"
+                            value={formData.rate_unit}
+                            onChange={handleChange}
+                            options={[
+                                { value: 'hour', label: 'Per Hour' },
+                                { value: 'day', label: 'Per Day' }
+                            ]}
+                            placeholder="Select Unit"
+                        />
+                    </div>
 
                     <Select
-                        label="Category"
+                        label="Category *"
                         name="category"
                         value={formData.category}
                         onChange={handleChange}
@@ -203,17 +226,50 @@ export default function EditWorkerProfile() {
                         placeholder="Select a category"
                     />
 
-                    <Input
-                        label="Skills (comma separated)"
-                        name="skills"
-                        value={formData.skills}
-                        onChange={handleChange}
-                        placeholder="e.g. Leak Fix, Pipe Fitting, Installation"
-                        icon={<Wrench size={18} />}
-                    />
+                    <div className="space-y-3">
+                        <label className="text-sm font-medium text-gray-700 block">Skills *</label>
+                        <div className="flex gap-2">
+                            <Input
+                                value={currentSkill}
+                                onChange={(e) => setCurrentSkill(e.target.value)}
+                                placeholder="Add a skill (e.g. Tile Fitting)"
+                                className="flex-1"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault()
+                                        handleAddSkill()
+                                    }
+                                }}
+                            />
+                            <Button
+                                type="button"
+                                onClick={handleAddSkill}
+                                className="bg-black text-white px-4"
+                            >
+                                <Plus size={18} />
+                                Add
+                            </Button>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                            {formData.skills.map((skill, index) => (
+                                <div key={index} className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
+                                    {skill}
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRemoveSkill(index)}
+                                        className="text-gray-400 hover:text-red-500"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                        {formData.skills.length === 0 && <p className="text-xs text-red-500">At least one skill is required.</p>}
+                    </div>
 
                     <Input
-                        label="Location"
+                        label="Location *"
                         name="location"
                         value={formData.location}
                         onChange={handleChange}
@@ -222,7 +278,7 @@ export default function EditWorkerProfile() {
                     />
 
                     <Textarea
-                        label="Professional Bio"
+                        label="Professional Bio *"
                         name="bio"
                         value={formData.bio}
                         onChange={handleChange}

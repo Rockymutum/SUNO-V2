@@ -2,14 +2,17 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Avatar } from '@/components/ui/Avatar'
-import { Settings, LogOut, ChevronRight, User, Bell, Shield, Briefcase, Plus } from 'lucide-react'
+import { Settings, LogOut, ChevronRight, User, Bell, Shield, Briefcase, Plus, Wallet } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { useNavigate } from 'react-router-dom'
 
+import { useQueryClient } from '@tanstack/react-query'
+
 export default function Profile() {
-    const { user, profile, signOut } = useAuth()
+    const { user, profile, signOut, refreshProfile } = useAuth()
     const navigate = useNavigate()
+    const queryClient = useQueryClient()
     const [isWorker, setIsWorker] = useState(false)
     const [loadingWorkerStatus, setLoadingWorkerStatus] = useState(false)
     const [postedTasksCount, setPostedTasksCount] = useState(0)
@@ -41,14 +44,28 @@ export default function Profile() {
         setLoadingWorkerStatus(true)
 
         try {
-            const { error } = await supabase
+            const { data, error } = await supabase
                 .from('users')
                 .update({ is_worker: newValue })
                 .eq('id', user.id)
+                .select() // Return modified rows
 
             if (error) throw error
+
+            // Check if row was actually updated (RLS might silently ignore)
+            if (!data || data.length === 0) {
+                throw new Error("Update ignored by database (RLS Policy).")
+            }
+
+            // Successfully updated DB, now refresh global profile to match
+            await refreshProfile()
+
+            // Force refresh of the workers list so this user disappears/appears immediately
+            await queryClient.invalidateQueries({ queryKey: ['workers'] })
+
         } catch (error) {
             console.error('Error updating worker status:', error)
+            alert(`Failed to update status: ${error.message}`) // Feedback to user
             setIsWorker(!newValue) // Revert on error
         } finally {
             setLoadingWorkerStatus(false)
@@ -68,6 +85,7 @@ export default function Profile() {
         { icon: User, label: 'Edit Profile' },
         { icon: Bell, label: 'Notifications' },
         { icon: Shield, label: 'Privacy & Security' },
+        { icon: Wallet, label: 'Wallet' },
     ]
 
     const workerMenuItems = [
@@ -108,9 +126,9 @@ export default function Profile() {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-                <Card className="p-4 text-center bg-primary text-white border-none shadow-lg shadow-primary/20">
-                    <div className="text-2xl font-bold">₹0</div>
-                    <div className="text-[10px] opacity-80 uppercase tracking-wider">Wallet Balance</div>
+                <Card className="p-4 text-center bg-primary text-white border-none shadow-lg shadow-primary/20 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => navigate('/wallet')}>
+                    <div className="text-2xl font-bold">Wallet</div>
+                    <div className="text-[10px] opacity-80 uppercase tracking-wider">Tap to View</div>
                 </Card>
                 <Card className="p-4 text-center">
                     <div className="text-2xl font-bold">{postedTasksCount}</div>
@@ -126,6 +144,7 @@ export default function Profile() {
                         onClick={() => {
                             if (item.label === 'Edit Profile') navigate('/profile/edit')
                             if (item.label === 'Privacy & Security') navigate('/privacy')
+                            if (item.label === 'Wallet') navigate('/wallet')
                         }}
                     >
                         <div className="flex items-center gap-3">
@@ -163,4 +182,3 @@ export default function Profile() {
         </div>
     )
 }
-

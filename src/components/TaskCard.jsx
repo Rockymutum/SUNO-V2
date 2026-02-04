@@ -1,4 +1,4 @@
-import { MapPin, Clock, Heart, MessageCircle, Share2, MoreHorizontal, Edit, Trash2 } from 'lucide-react'
+import { MapPin, Clock, Heart, MessageCircle, Share2, MoreHorizontal, Edit, Trash2, Lock } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
@@ -15,7 +15,7 @@ import { Modal } from '@/components/ui/Modal'
 import { CATEGORIES } from '@/lib/constants'
 
 export function TaskCard({ task, onDelete }) {
-    // Mock data fallbacks
+    // Defensive destructuring
     const {
         id,
         title = "Untitled Task",
@@ -24,11 +24,16 @@ export function TaskCard({ task, onDelete }) {
         budget_max,
         location = "Unknown Location",
         created_at,
-        photos = [],
-        creator: _creator
+        photos: _photos,
+        creator: _creator,
+        target_worker_id
     } = task || {}
 
+    // Robust fallbacks
+    // Ensure photos is strictly an array
+    const photos = Array.isArray(_photos) ? _photos : []
     const creator = _creator || { display_name: "Anonymous", avatar_url: null }
+
     const { user } = useAuth()
     const navigate = useNavigate()
     const [menuOpen, setMenuOpen] = useState(false)
@@ -38,6 +43,9 @@ export function TaskCard({ task, onDelete }) {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
     const [errorModal, setErrorModal] = useState({ isOpen: false, message: '' })
     const menuRef = useRef(null)
+
+    // Safety check - if task is completely missing, don't render
+    if (!task) return null
 
     // Fetch initial like state
     useEffect(() => {
@@ -70,7 +78,6 @@ export function TaskCard({ task, onDelete }) {
             return
         }
 
-        // Optimistic UI update
         const newLiked = !liked
         setLiked(newLiked)
         setLikesCount(prev => newLiked ? prev + 1 : prev - 1)
@@ -82,7 +89,6 @@ export function TaskCard({ task, onDelete }) {
                     .insert({ task_id: id, user_id: user.id })
                 if (error) throw error
 
-                // Notify Task Owner
                 if (task.created_by !== user.id) {
                     const { error: notifError } = await supabase
                         .from('notifications')
@@ -94,6 +100,7 @@ export function TaskCard({ task, onDelete }) {
                             is_read: false
                         })
 
+                    // Fire and forget push notification
                     if (!notifError) {
                         supabase.functions.invoke('push-notification', {
                             body: {
@@ -118,7 +125,6 @@ export function TaskCard({ task, onDelete }) {
             }
         } catch (err) {
             console.error('Like failed:', err)
-            // Revert on error
             setLiked(!newLiked)
             setLikesCount(prev => !newLiked ? prev + 1 : prev - 1)
         }
@@ -142,12 +148,11 @@ export function TaskCard({ task, onDelete }) {
 
     const confirmDelete = async () => {
         try {
-            // Delete images first
-            if (photos && photos.length > 0) {
+            // Safe check for photos before deletion
+            if (photos?.length > 0) {
                 await Promise.all(photos.map(url => deleteImage(url)))
             }
 
-            // Delete the task - removed .select() to avoid permission issues
             const { error } = await supabase
                 .from('tasks')
                 .delete()
@@ -155,29 +160,18 @@ export function TaskCard({ task, onDelete }) {
 
             if (error) throw error
 
-            // Close the modal
             setIsDeleteModalOpen(false)
-
-            // Call the onDelete callback if provided
             if (onDelete) {
                 onDelete(id)
             } else {
-                // Fallback to reload if no callback
                 window.location.reload()
             }
         } catch (error) {
             console.error('Error deleting task:', error)
             setIsDeleteModalOpen(false)
-
-            // Show detailed error message
-            const errorMessage = error.message || 'Failed to delete task'
-            const detailedMessage = error.code
-                ? `${errorMessage} (Error code: ${error.code})`
-                : errorMessage
-
             setErrorModal({
                 isOpen: true,
-                message: detailedMessage
+                message: error.message || 'Failed to delete task'
             })
         }
     }
@@ -206,7 +200,7 @@ export function TaskCard({ task, onDelete }) {
         }
     }
 
-    const isOwner = user && task.created_by === user.id
+    const isOwner = user && task?.created_by === user.id
 
     return (
         <Card className="mb-4">
@@ -264,18 +258,23 @@ export function TaskCard({ task, onDelete }) {
             </div>
 
             {/* Hero Image */}
-            {photos.length > 0 && (
+            {photos?.length > 0 && (
                 <Link to={`/task/${id}`} className="block w-full h-56 bg-gray-100 overflow-hidden relative active:opacity-90 transition-opacity">
                     <img src={photos[0]} alt={title} className="w-full h-full object-cover" />
 
-                    {/* Category Badge for Photo Card */}
-                    <div className="absolute top-3 left-3">
+                    <div className="absolute top-3 left-3 flex gap-2">
                         {(() => {
                             const cat = CATEGORIES.find(c => c.id === task.category)
                             return cat ? (
                                 <Badge className={`${cat.color} border-0 shadow-sm bg-white/90 backdrop-blur`}>{cat.name}</Badge>
                             ) : null
                         })()}
+                        {/* Booked Badge */}
+                        {target_worker_id && (
+                            <Badge className="bg-black/80 text-white border-0 shadow-sm backdrop-blur flex items-center gap-1">
+                                <Lock size={10} /> Booked
+                            </Badge>
+                        )}
                     </div>
 
                     <div className="absolute bottom-3 right-3">
@@ -287,18 +286,24 @@ export function TaskCard({ task, onDelete }) {
             )}
 
             {/* Content */}
-            {/* Content */}
             <div className="p-4 pt-3">
-                {photos.length === 0 && (
+                {photos?.length === 0 && (
                     <div className="flex items-center justify-between mb-2">
-                        {(() => {
-                            const cat = CATEGORIES.find(c => c.id === task.category)
-                            return cat ? (
-                                <Badge className={`${cat.color} border-0`}>{cat.name}</Badge>
-                            ) : (
-                                <Badge variant="outline" className="border-slate-200">General</Badge>
-                            )
-                        })()}
+                        <div className="flex items-center gap-2">
+                            {(() => {
+                                const cat = CATEGORIES.find(c => c.id === task.category)
+                                return cat ? (
+                                    <Badge className={`${cat.color} border-0`}>{cat.name}</Badge>
+                                ) : (
+                                    <Badge variant="outline" className="border-slate-200">General</Badge>
+                                )
+                            })()}
+                            {target_worker_id && (
+                                <Badge variant="secondary" className="bg-gray-100 text-gray-600 border-gray-200 flex items-center gap-1">
+                                    <Lock size={10} /> Booked
+                                </Badge>
+                            )}
+                        </div>
                         <span className="font-bold text-sm">₹{budget_min} - ₹{budget_max}</span>
                     </div>
                 )}
