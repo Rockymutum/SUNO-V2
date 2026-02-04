@@ -34,7 +34,10 @@ export default function TaskDetails() {
                 .eq('id', id)
                 .single()
 
-            if (taskError) throw taskError
+            if (taskError) {
+                console.error('Task fetch error:', taskError)
+                throw taskError
+            }
 
             // Applications
             const { data: appsData, error: appsError } = await supabase
